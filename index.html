@@ -415,6 +415,16 @@ function logFix(e, to, points){
   if (to) { const b = Object.assign({}, e, { who: to }); delete b.id; S.set('starlog/' + e.id, b); } else S.del('starlog/' + e.id);
   toast(to ? 'Jetzt bei ' + byId[to].name + ' eingetragen' : 'Abgewählt, Sterne abgezogen');
 }
+/* Sterne, zu denen keine Aufgabe mehr bekannt ist (z. B. gelöschte Aufgaben), als eigener Eintrag – damit auch sie korrigierbar sind */
+function backfillRest(){
+  const P = mem_.docs['points/all'] || {}; const logs = logAll(); const today = iso(new Date());
+  MEMBERS.forEach(m => { const own = 'b-x-' + m.id;
+    const sumOthers = r2(logs.filter(e => e.who === m.id && e.id !== own).reduce((a, e) => a + (e.stars || 0), 0));
+    const cur = logs.find(e => e.id === own && e.who === m.id);
+    const diff = r2((P[m.id] || 0) - sumOthers);
+    if (diff > 0.01) { if (!cur || Math.abs((cur.stars || 0) - diff) > 0.01) S.set('starlog/' + own, { who: m.id, stars: diff, what: 'Ältere Sterne', kind: 'alt', date: cur ? cur.date : today, at: 0 }); }
+    else if (cur) S.del('starlog/' + own); });
+}
 /* Ältere Erledigungen (vor Einführung des Protokolls) aus Häkchen und Aufgaben nachtragen */
 function backfillLog(){
   if (!mem_) return; const docs = mem_.docs; const logs = logAll(); const R = docs['config/routines'] || {};
@@ -432,6 +442,7 @@ function backfillLog(){
     Object.keys(t.done || {}).forEach(key => { const w = t.done[key]; const list = Array.isArray(w) ? w : [w]; const date = key === 'once' ? (t.doneOn || t.date) : key; if (!date) return;
       list.forEach(who => { if (!byId[who] || has(e => e.todo === id && e.key === key && e.who === who)) return;
         S.set('starlog/b-t-' + id + '-' + key + '-' + who, { who, stars: r2(st / list.length), what: t.title, kind: 'todo', todo: id, key, date, team: list.length > 1 ? list : null, at: 0 }); }); }); });
+  backfillRest();
 }
 
 /* ---------- Offene Aufgaben (für alle) ---------- */
@@ -1737,7 +1748,7 @@ function StarStats({ id, now, points, week }){
     ${top.length ? html`<div class="field">Am häufigsten erledigt<div class="top">${top.map(w => html`<span>${w} · ${cnt[w]}×</span>`)}</div></div>` : null}
     <div class="field">Was wurde erledigt? Falsch eingetragen → „Ändern“ (andere Person) oder „Abwählen“.
       ${mine.length ? html`<div class="list">${shown.map(e => html`<div class="logli">
-        <span class="lt"><b>${e.what}</b><span>${fromIso(e.date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' })} · ${e.kind === 'todo' ? 'Aufgabe für alle' + (e.team ? ' (mit ' + names(e.team.filter(x => x !== id)) + ')' : '') : e.kind === 'ptask' ? 'Einzelaufgabe' : 'Routine ' + (SLOTS[slotIdx(e.mode || 'morgen')] || SLOTS[0]).adv}</span></span>
+        <span class="lt"><b>${e.what}</b><span>${fromIso(e.date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' })} · ${e.kind === 'todo' ? 'Aufgabe für alle' + (e.team ? ' (mit ' + names(e.team.filter(x => x !== id)) + ')' : '') : e.kind === 'ptask' ? 'Einzelaufgabe' : e.kind === 'alt' ? 'gesammelt vor der Statistik – welche Aufgabe, ist nicht mehr bekannt' : 'Routine ' + (SLOTS[slotIdx(e.mode || 'morgen')] || SLOTS[0]).adv}</span></span>
         <span class="ls">${e.stars ? html`<${Star} size=${16} />+${fmtS(e.stars)}` : html`<span style="font-size:12px;color:var(--muted)">ohne Stern</span>`}</span>
         ${fix === e.id ? html`<div class="row" style="gap:6px;width:100%"><span style="font-weight:800;font-size:14px">Wer hat es wirklich gemacht?</span>${MEMBERS.filter(m => m.id !== id).map(m => html`<button type="button" class="chip" onClick=${() => { logFix(e, m.id, points); setFix(null); }}>${m.name}</button>`)}<button type="button" class="chip" onClick=${() => setFix(null)}>Abbrechen</button></div>`
           : del === e.id ? html`<div class="row" style="gap:6px"><span style="font-weight:800;font-size:14px">Wirklich abwählen? Die Sterne werden abgezogen.</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => { logFix(e, null, points); setDel(null); }}>Abwählen</button><button type="button" class="btn small ghost" onClick=${() => setDel(null)}>Nein</button></div>`
