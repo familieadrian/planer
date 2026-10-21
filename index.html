@@ -286,6 +286,11 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .step .sx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .step .sx b{font-size:15px}.step .sx span{font-size:13px;color:var(--muted);font-weight:600}
 .claimed{font-size:13px;font-weight:800;color:var(--ok-ink);background:var(--ok-soft);padding:5px 10px;border-radius:999px;flex-shrink:0}
+/* ---------- Aufgaben verschieben ---------- */
+.task{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.task.lifted{opacity:.35}
+.col.dropover{outline:4px dashed var(--accent);outline-offset:-4px;background:var(--accent-soft)}
+.dragghost{position:fixed;z-index:300;pointer-events:none;transform:translate(-50%,-60%) rotate(-3deg);background:var(--surface);border:3px solid var(--accent);border-radius:16px;padding:12px 16px;font-size:17px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px;max-width:260px}
 </style>
 
 </head>
@@ -904,6 +909,39 @@ function Heute({ now }){
     const next = { morgen: Object.assign({}, r.morgen || {}), abend: Object.assign({}, r.abend || {}) };
     next[mode][mid] = list; S.set('config/routines', next);
   };
+  /* Aufgabe lange gedrückt halten und zu einer anderen Person ziehen */
+  const [drag, setDrag] = useState(null);
+  const press = useRef(null); const dragRef = useRef(null); const skipClick = useRef(false);
+  const moveTask = (from, i, to) => {
+    const next = { morgen: Object.assign({}, r.morgen || {}), abend: Object.assign({}, r.abend || {}) };
+    const src = ((next[mode] || {})[from] || []).slice(); const t = src.splice(i, 1)[0]; if (!t) return;
+    const dst = ((next[mode] || {})[to] || []).concat([t]);
+    next[mode][from] = src; next[mode][to] = dst; S.set('config/routines', next);
+    const c = Object.assign({}, checks || {}); const key = (m, j) => m + '-' + mode + '-' + j; const was = !!c[key(from, i)];
+    for (let j = i; j <= src.length; j++) { if (c[key(from, j + 1)]) c[key(from, j)] = true; else delete c[key(from, j)]; }
+    if (was) c[key(to, dst.length - 1)] = true; else delete c[key(to, dst.length - 1)];
+    S.set('checks/' + today, c);
+    toast('„' + t.label + '“ ist jetzt bei ' + byId[to].name);
+  };
+  useEffect(() => {
+    const overAt = (x, y) => { const el = document.elementFromPoint(x, y); const col = el && el.closest ? el.closest('[data-mid]') : null; return col ? col.getAttribute('data-mid') : null; };
+    const mv = e => { const p = press.current; if (!p) return;
+      if (!p.active) { if (Math.abs(e.clientX - p.x) > 10 || Math.abs(e.clientY - p.y) > 10) { clearTimeout(p.timer); press.current = null; } return; }
+      const d = Object.assign({}, dragRef.current, { x: e.clientX, y: e.clientY, over: overAt(e.clientX, e.clientY) }); dragRef.current = d; setDrag(d); };
+    const up = e => { const p = press.current; if (!p) return; clearTimeout(p.timer); press.current = null;
+      if (p.active) { skipClick.current = true; setTimeout(() => { skipClick.current = false; }, 400);
+        const d = dragRef.current; dragRef.current = null; setDrag(null);
+        if (d && d.over && d.over !== d.mid && e.type !== 'pointercancel') moveTask(d.mid, d.i, d.over); } };
+    const tm = e => { if (press.current && press.current.active) e.preventDefault(); };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    document.addEventListener('touchmove', tm, { passive: false });
+    return () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); document.removeEventListener('touchmove', tm); };
+  });
+  const startPress = (e, mid, i, t) => { if (e.button) return;
+    const p = { x: e.clientX, y: e.clientY, active: false };
+    p.timer = setTimeout(() => { p.active = true; try { navigator.vibrate && navigator.vibrate(30); } catch (x) {}
+      const d = { mid, i, t, x: p.x, y: p.y, over: mid }; dragRef.current = d; setDrag(d); }, 450);
+    press.current = p; };
   const morning = mode === 'morgen';
   return html`
     <div class="head">
@@ -925,13 +963,14 @@ function Heute({ now }){
       ${soonExams.map(x => html`<span class="tchip exam">${countdown(daysUntil(x.datum, now))}: ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span>`)}
     </a>` : null}
     <${Todos} today=${today} />
+    ${edit ? html`<div class="hint">Tipp: Eine Aufgabe lange gedrückt halten und zu einer anderen Person ziehen, um sie zu verschieben.</div>` : null}
     ${routines === undefined ? html`<div class="loading">Routinen werden geladen …</div>` : html`
     <div class="cols">
       ${MEMBERS.map(m => {
         const list = (r[mode] && r[mode][m.id]) || [];
         const n = list.filter((t,i) => checks && checks[m.id + '-' + mode + '-' + i]).length;
         const all = list.length > 0 && n === list.length;
-        return html`<section class="col" aria-label=${m.name}>
+        return html`<section class=${'col' + (drag && drag.over === m.id && drag.mid !== m.id ? ' dropover' : '')} data-mid=${m.id} aria-label=${m.name}>
           <div class="colhead">
             <span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${m.name[0]}</span>
             <div style="min-width:0"><div class="colname">${m.name}</div>
@@ -939,7 +978,8 @@ function Heute({ now }){
           </div>
           ${list.map((t, i) => { const d = !!(checks && checks[m.id + '-' + mode + '-' + i]);
             return html`<div style="display:flex;gap:6px;align-items:center">
-              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${() => toggle(m.id, i)}
+              <button type="button" class=${'task' + (drag && drag.mid === m.id && drag.i === i ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')}
+                onPointerDown=${e => startPress(e, m.id, i, t)} onContextMenu=${e => e.preventDefault()} onClick=${() => { if (skipClick.current) return; toggle(m.id, i); }}
                 style=${d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : ''}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon} size=${28} color=${mc(m.id)} /></span>
                 <span class="lbl">${t.label}</span>
@@ -956,7 +996,8 @@ function Heute({ now }){
           </div>
         </section>`;
       })}
-    </div>`}`;
+    </div>`}
+    ${drag ? html`<div class="dragghost" style=${'left:' + drag.x + 'px;top:' + drag.y + 'px'} aria-hidden="true"><${Icon} n=${drag.t.icon} size=${24} color=${mc(drag.mid)} />${drag.t.label}${drag.over && drag.over !== drag.mid ? ' → ' + byId[drag.over].name : ''}</div>` : null}`;
 }
 function AddTask({ onAdd }){
   const [label, setLabel] = useState(''); const [icon, setIcon] = useState('star');
