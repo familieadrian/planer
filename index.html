@@ -360,6 +360,9 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 .mthumb .art{width:100%}
 .mdish{flex:1;min-width:0;font-size:14px;font-weight:800;line-height:1.2;overflow-wrap:break-word;hyphens:auto}
 .mplus{font-size:13px;font-weight:800;color:var(--muted)}
+.undobar{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:24px;z-index:240;display:flex;align-items:center;gap:8px;min-height:56px;padding:0 20px;border:none;border-radius:999px;background:var(--fg);color:var(--bg);font-size:17px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.undobar small{background:var(--accent);color:var(--accent-fg);border-radius:999px;padding:2px 8px;font-size:12px}
+@media (max-width:820px){.undobar{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
 </style>
 
 </head>
@@ -674,6 +677,7 @@ const IC = {
   trophy:'M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 13v3M9 16h6v4H9zM7 20h10',
   lock:'M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3M12 15v2',
   unlock:'M6 11h12v10H6zM8 11V8a4 4 0 0 1 7.5-2M12 15v2',
+  undo:'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
   music:'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zM20 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3z'
 };
 const TASK_ICONS = ['shirt','tooth','bed','bowl','shoe','bag','lunch','dish','bin','car','book','basket','fork','pencil','drop','moon','blocks','paw','music','star'];
@@ -834,6 +838,20 @@ async function startSync(){
   resolveReady(true);
 }
 mem_ = mem;
+/* ---------- Rückgängig: jede Änderung merkt sich den vorherigen Stand ---------- */
+const undoStack = []; let undoGroup = null; let undoQuiet = false;
+function recordUndo(p){
+  if (undoQuiet) return; const now = Date.now();
+  if (!undoGroup || now - undoGroup.t > 900) { undoGroup = { t: now, items: {} }; undoStack.push(undoGroup); if (undoStack.length > 30) undoStack.shift(); }
+  if (!(p in undoGroup.items)) undoGroup.items[p] = mem.docs[p] === undefined ? null : JSON.parse(JSON.stringify(mem.docs[p]));
+  undoGroup.t = now; setTimeout(() => window.dispatchEvent(new CustomEvent('fb-undo')), 0);
+}
+function undoLast(){
+  const g = undoStack.pop(); if (!g) return false; undoGroup = null; undoQuiet = true;
+  try { Object.keys(g.items).forEach(p => { const v = g.items[p]; if (v === null) S.del(p); else S.set(p, v); }); } finally { undoQuiet = false; }
+  window.dispatchEvent(new CustomEvent('fb-undo')); return true;
+}
+const quietly = f => { undoQuiet = true; try { f(); } finally { undoQuiet = false; } };
 const S = {
   watchDoc(p, cb){ const f = () => cb(mem.docs[p]); mem.subs.add(f); f(); return () => mem.subs.delete(f); },
   watchCol(p, cb){
@@ -841,10 +859,12 @@ const S = {
     mem.subs.add(f); f(); return () => mem.subs.delete(f);
   },
   set(p, data){
+    recordUndo(p);
     mem.docs[p] = data; memNotify();
     return sb.from('docs').upsert({ path: p, col: colOf(p), data, updated_at: new Date().toISOString() }).then(r => { if (r.error) dbErr(r.error); });
   },
   del(p){
+    recordUndo(p);
     delete mem.docs[p]; memNotify();
     return sb.from('docs').delete().eq('path', p).then(r => { if (r.error) dbErr(r.error); });
   },
@@ -1118,6 +1138,14 @@ function PinPad({ mode, who, why, title, superOnly, onDone }){
         : html`<button type="button" onClick=${() => press(k)}>${k}</button>`)}</div>
       ${mode === 'check' && !superOnly ? html`<div class="sub" style="font-size:12px;text-align:center">PIN vergessen? Die Super-PIN von ${byId[who] ? byId[who].name : ''} oder von Mama/Papa geht auch.</div>` : null}
     </div></div>`;
+}
+function UndoBar(){
+  const [n, setN] = useState(0); const [show, setShow] = useState(false); const tm = useRef(null);
+  useEffect(() => { const h = () => { setN(undoStack.length); setShow(undoStack.length > 0); clearTimeout(tm.current); tm.current = setTimeout(() => setShow(false), 15000); };
+    window.addEventListener('fb-undo', h); return () => window.removeEventListener('fb-undo', h); }, []);
+  if (!show || !n) return null;
+  return html`<button type="button" class="undobar" onClick=${() => { if (undoLast()) toast('Rückgängig gemacht'); }} aria-label="Letzte Änderung rückgängig machen">
+    <${Icon} n="undo" size=${22} sw=${2.4} />Rückgängig${n > 1 ? html`<small>${n}</small>` : null}</button>`;
 }
 function PinHost(){
   const [q, setQ] = useState(null);
@@ -1977,7 +2005,7 @@ function Sterne({ now }){
   const [sel, setSel] = useState('dorothea');
   const [edit, setEdit] = useState(false);
   const [open, setOpen] = useState(null);
-  useEffect(() => { dbReady.then(() => { try { backfillLog(); } catch (e) { console.error(e); } }); }, []);
+  useEffect(() => { dbReady.then(() => { try { quietly(backfillLog); } catch (e) { console.error(e); } }); }, []);
   const P = points || {}, W = week || {}, C = claims || {}, R = custom || {};
   const rw = l => ((R.levels || {})[l.at]) || l.reward;
   const fr = g => ((R.family || {})[g.at]) || g.reward;
@@ -2136,6 +2164,7 @@ function App(){
 render(html`<${App} />`, document.getElementById('root'));
 const tpBox = document.createElement('div'); document.body.appendChild(tpBox); render(html`<${TypePreview} />`, tpBox);
 const pinBox = document.createElement('div'); document.body.appendChild(pinBox); render(html`<${PinHost} />`, pinBox);
+const undoBox = document.createElement('div'); document.body.appendChild(undoBox); render(html`<${UndoBar} />`, undoBox);
 /* Sichtbare Höhe merken, damit die Leiste unten immer zu sehen ist (auch wenn die Browserleiste ein-/ausfährt) */
 const setAppH = () => { const a = document.activeElement; if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return; document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px'); };
 setAppH(); window.addEventListener('resize', setAppH); window.addEventListener('orientationchange', () => setTimeout(setAppH, 300));
