@@ -477,6 +477,74 @@ function backfillLog(){
   backfillRest();
 }
 
+/* ---------- Sprache verstehen: „Termin morgen um 15 Uhr Zahnarzt für Dorothea“ ---------- */
+const NUMW = { ein:1, eins:1, eine:1, einen:1, zwei:2, drei:3, vier:4, fünf:5, sechs:6, sieben:7, acht:8, neun:9, zehn:10, elf:11, zwölf:12 };
+const MONS = ['januar','februar','märz','april','mai','juni','juli','august','september','oktober','november','dezember'];
+const WDS = ['sonntag','montag','dienstag','mittwoch','donnerstag','freitag','samstag'];
+const PNAMES = { klaus:['klaus','papa','papi'], helena:['helena','mama','mami'], dorothea:['dorothea','doro'], marlene:['marlene'], clemens:['clemens'] };
+function parseSpeech(text, now){
+  now = now || new Date();
+  let t = ' ' + String(text || '').toLowerCase().replace(/[,!?]/g, ' ').replace(/\s+/g, ' ') + ' ';
+  const out = { raw: text, who: [], slots: [] };
+  const cut = re => { const m = t.match(re); if (m) t = t.replace(re, ' '); return m; };
+  const num = w => (w == null ? null : /^\d+$/.test(w) ? +w : NUMW[w] != null ? NUMW[w] : null);
+  // Art
+  if (/ termin| arzt| treffen| geburtstag/.test(t)) out.kind = 'event';
+  if (/ für alle| alle zusammen| familienaufgabe| aufgabe für die familie/.test(t)) out.forAll = true;
+  if (/ aufgabe| erledigen| muss | soll | aufräumen| putzen| rausbringen| machen | waschen| saugen| gießen| füttern| üben| holen| bringen| abgeben| packen| spülen| ausräumen| einräumen/.test(t) && !out.kind) out.kind = 'task';
+  // Wiederholung
+  let m = cut(/ alle (\d+|zwei|drei|vier|fünf|sechs|acht) wochen /); if (m) { out.every = num(m[1]); out.repeat = 'interval'; }
+  let dm_ = cut(/ (jeden tag|täglich|jeden morgen|jeden mittag|jeden abend) /); if (dm_) { out.daily = true; const sl = { 'jeden morgen':'morgen', 'jeden mittag':'mittag', 'jeden abend':'abend' }[dm_[1]]; if (sl) out.slots.push(sl); }
+  if (cut(/ (jede woche|wöchentlich) /)) { out.repeat = 'weekly'; out.every = 1; }
+  // Personen
+  if (cut(/ (für |von )?(alle|allen|jeden|jede|die ganze familie|familie) /)) out.all = true;
+  Object.keys(PNAMES).forEach(id => { PNAMES[id].forEach(n => { const re = new RegExp(' (für |von |mit |bei )?' + n + 's? '); if (re.test(t)) { t = t.replace(re, ' '); if (out.who.indexOf(id) < 0) out.who.push(id); } }); });
+  // Tageszeit
+  if (cut(/ (morgens|früh|vormittags|morgen früh) /)) { out.slots.push('morgen'); if (/morgen früh/.test(text.toLowerCase())) out.date = iso(addDays(now, 1)); }
+  if (cut(/ (mittags|nachmittags|am nachmittag|mittag) /)) out.slots.push('mittag');
+  if (cut(/ (abends|am abend|heute abend) /)) { out.slots.push('abend'); if (/heute abend/.test(text.toLowerCase())) out.date = iso(now); }
+  // Datum
+  if (cut(/ übermorgen /)) out.date = iso(addDays(now, 2));
+  else if (cut(/ morgen /)) out.date = iso(addDays(now, 1));
+  else if (cut(/ heute /)) out.date = iso(now);
+  m = cut(/ (am |nächsten |kommenden |diesen )*(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag) /);
+  if (m) { const wd = WDS.indexOf(m[2]); let d = addDays(now, 1); while (d.getDay() !== wd) d = addDays(d, 1); if (/nächsten/.test(m[0]) && (d - now) / 864e5 < 2) d = addDays(d, 7); out.date = iso(d); }
+  m = cut(/ (am )?(\d{1,2})\.? (januar|februar|märz|april|mai|juni|juli|august|september|oktober|november|dezember)( \d{4})? /);
+  if (m) { const y = m[4] ? +m[4] : now.getFullYear(); let d = new Date(y, MONS.indexOf(m[3]), +m[2], 12); if (!m[4] && d < addDays(now, -1)) d = new Date(y + 1, MONS.indexOf(m[3]), +m[2], 12); out.date = iso(d); }
+  m = cut(/ (am )?(\d{1,2})\.(\d{1,2})\.?(\d{2,4})? /);
+  if (m) { let y = m[4] ? +m[4] : now.getFullYear(); if (y < 100) y += 2000; let d = new Date(y, +m[3] - 1, +m[2], 12); if (!m[4] && d < addDays(now, -1)) d = new Date(y + 1, +m[3] - 1, +m[2], 12); out.date = iso(d); }
+  // Uhrzeit
+  const fixH = h => (h != null && h < 7 && out.kind !== 'task' ? h + 12 : h);
+  m = cut(/ (von |ab )?(\d{1,2})(?:[:.](\d{2})| uhr (\d{1,2})| uhr)? bis (\d{1,2})(?:[:.](\d{2})| uhr (\d{1,2})| uhr)? /);
+  if (m) { out.time = pad(fixH(+m[2])) + ':' + pad(+(m[3] || m[4] || 0)); out.end = pad(fixH(+m[5])) + ':' + pad(+(m[6] || m[7] || 0)); }
+  if (!out.time) { m = cut(/ um halb (\d{1,2}|ein|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf) /); if (m) out.time = pad(fixH(num(m[1]) - 1)) + ':30'; }
+  if (!out.time) { m = cut(/ um (\d{1,2}|ein|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)(?:[:.](\d{2})| uhr (\d{1,2})| uhr)? /); if (m) out.time = pad(fixH(num(m[1]))) + ':' + pad(+(m[2] || m[3] || 0)); }
+  if (!out.time) { m = cut(/ (\d{1,2})[:.](\d{2}) (uhr )?/); if (m) out.time = pad(+m[1]) + ':' + m[2]; }
+  if (out.time && !out.kind) out.kind = 'event';
+  if (!out.kind) out.kind = out.date && !out.slots.length ? 'event' : 'task';
+  // Titel = Rest ohne Füllwörter
+  const stop = /\b(neuer|neue|neues|einen|eine|ein|termin|aufgabe|aufgaben|trag|trage|eintragen|ein|bitte|hinzufügen|für|am|um|uhr|von|bis|und|der|die|das|den|dem|mal|noch|ich|wir|soll|muss|ab|zu|zum|zur)\b/g;
+  let title = t.replace(stop, ' ').replace(/\s+/g, ' ').trim();
+  if (title) title = title[0].toUpperCase() + title.slice(1);
+  out.title = title;
+  return out;
+}
+function VoiceAdd({ onResult, label, small }){
+  const [txt, setTxt] = useState(null);
+  const voice = useVoice(t => onResult(parseSpeech(t)));
+  const go = () => { if (!txt || !txt.trim()) return; const r = parseSpeech(txt); setTxt(null); onResult(r); };
+  useEffect(() => { if (voice.fallback) { setTxt(''); voice.clearFallback(); } }, [voice.fallback]);
+  return html`<button type="button" class=${'btn small ' + (voice.on ? '' : 'ghost')} style=${voice.on ? 'background:var(--danger);color:#fff' : ''} onClick=${voice.toggle} aria-pressed=${voice.on}>
+      <${Icon} n="mic" size=${18} />${voice.on ? 'Ich höre zu …' : (label || 'Sprechen')}</button>
+    ${txt !== null ? html`<${Sheet} title="Per Sprache eintragen" onClose=${() => setTxt(null)}>
+      <div class="sub" style="font-size:14px">Dieses Gerät hört nicht direkt zu. Tipp ins Feld und dann auf das Mikrofon deiner Tastatur – und sag z. B. „Termin morgen um 15 Uhr Zahnarzt für Dorothea“ oder „Aufgabe für Marlene Zimmer aufräumen jeden Abend“.</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <label class="field">Was soll eingetragen werden?<input id="voice-text" value=${txt} onInput=${e => setTxt(e.target.value)} placeholder="z. B. Termin Freitag 16 Uhr Turnen Marlene"
+          onKeyDown=${e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); go(); } }} /></label>
+        <button class="btn" type="button" onClick=${go}>Verstehen</button>
+      </div><//>` : null}`;
+}
+
 /* ---------- PIN-Schutz ---------- */
 async function pinHash(who, kind, code){
   const txt = 'fb:' + who + ':' + kind + ':' + code;
@@ -988,11 +1056,12 @@ function TypePreview(){
 }
 function Todos({ today }){
   const todos = useCol('todos') || [];
-  const [sel, setSel] = useState(null); const [add, setAdd] = useState(false);
+  const [sel, setSel] = useState(null); const [add, setAdd] = useState(false); const [voice, setVoice] = useState(null);
   const list = todos.filter(t => todoOn(t, today, today)).sort((a, b) => (whoOf(a, today).length > 0) - (whoOf(b, today).length > 0) || (a.title || '').localeCompare(b.title || ''));
   return html`<section class="card" aria-label="Aufgaben für alle" style="padding:14px 18px">
     <div class="row" style="justify-content:space-between"><h2 style="font-size:19px">Aufgaben für alle <span class="sub" style="font-size:14px">· wer’s macht, bekommt die Sterne</span></h2>
-      <div class="row" style="gap:8px"><button type="button" class="btn small ghost" onClick=${() => setAdd('event')}><${Icon} n="plus" size=${18} />Termin</button>
+      <div class="row" style="gap:8px"><${VoiceAdd} onResult=${v => setVoice(v)} />
+        <button type="button" class="btn small ghost" onClick=${() => setAdd('event')}><${Icon} n="plus" size=${18} />Termin</button>
         <button type="button" class="btn small ghost" onClick=${() => setAdd('todo')}><${Icon} n="plus" size=${18} />Aufgabe für alle</button></div></div>
     ${list.length ? html`<div class="todolist">${list.map(t => { const ws = whoOf(t, today); const who = ws[0];
       return html`<button type="button" class=${'todo' + (who ? ' done' : '')} onClick=${() => setSel(t)} style=${who ? 'background:' + mt(who) + ';border-color:' + mc(who) : ''}
@@ -1003,7 +1072,10 @@ function Todos({ today }){
       </button>`; })}</div>` : html`<div class="sub" style="font-size:14px">Gerade nichts offen.</div>`}
   </section>
   ${sel ? html`<${TodoClaim} t=${sel} ds=${today} onClose=${() => setSel(null)} />` : null}
-  ${add ? html`<${EventForm} date=${today} kind0=${add} fixed=${true} onClose=${() => setAdd(false)} />` : null}`;
+  ${add ? html`<${EventForm} date=${today} kind0=${add} fixed=${true} onClose=${() => setAdd(false)} />` : null}
+  ${voice ? (voice.kind === 'event' || voice.forAll
+      ? html`<${EventForm} date=${voice.date || today} kind0=${voice.forAll ? 'todo' : 'event'} init=${{ title: voice.title, date: voice.date || today, time: voice.time || '', end: voice.end || '', who: voice.who.length === 1 ? voice.who[0] : 'familie', repeat: voice.repeat || 'none', every: voice.every, heard: voice.raw }} onClose=${() => setVoice(null)} />`
+      : html`<${PersonTaskForm} mid=${voice.who[0] || MEMBERS[0].id} mode0=${slotOf(new Date()).id} r=${(mem_ && mem_.docs['config/routines']) || {}} init=${voiceToTask(voice, voice.who[0] || MEMBERS[0].id, slotOf(new Date()).id)} onClose=${() => setVoice(null)} />`) : null}`;
 }
 function PinPad({ mode, who, why, title, superOnly, onDone }){
   const [code, setCode] = useState(''); const [bad, setBad] = useState(false);
@@ -1287,11 +1359,18 @@ function Heute({ now }){
     ${addFor ? html`<${PersonTaskForm} mid=${addFor} mode0=${mode} r=${r} onClose=${() => setAddFor(null)} />` : null}
     ${drag ? html`<div class="dragghost" style=${'left:' + drag.x + 'px;top:' + drag.y + 'px'} aria-hidden="true"><${Icon} n=${drag.t.icon} size=${24} color=${mc(drag.mid)} />${drag.t.label}${drag.over && drag.over !== drag.mid ? ' → ' + byId[drag.over].name : ''}</div>` : null}`;
 }
-function PersonTaskForm({ mid, mode0, r, onClose }){
-  const [label, setLabel] = useState(''); const [icon, setIcon] = useState('star');
-  const [when, setWhen] = useState('routine'); const [mds, setMds] = useState([mode0]);
-  const [whos, setWhos] = useState([mid]); const [lk, setLk] = useState(false); const [every, setEvery] = useState(4);
-  const [date, setDate] = useState(iso(new Date()));
+function voiceToTask(v, mid, mode0){
+  const whos = v.all ? MEMBERS.map(m => m.id) : v.who.length ? v.who : null;
+  const when = v.repeat === 'interval' || v.repeat === 'weekly' ? 'interval' : v.daily ? 'routine' : v.date ? 'once' : 'routine';
+  return { label: v.title, whos, when, mds: v.slots.length ? v.slots : (when === 'once' ? ['tag'] : [mode0]), every: v.every, date: v.date, heard: v.raw };
+}
+function PersonTaskForm({ mid, mode0, r, onClose, init }){
+  const I = init || {};
+  const [label, setLabel] = useState(I.label || ''); const [icon, setIcon] = useState('star');
+  const [when, setWhen] = useState(I.when || 'routine'); const [mds, setMds] = useState(I.mds && I.mds.length ? I.mds : [mode0]);
+  const [whos, setWhos] = useState(I.whos && I.whos.length ? I.whos : [mid]); const [lk, setLk] = useState(false); const [every, setEvery] = useState(I.every || 4);
+  const [date, setDate] = useState(I.date || iso(new Date()));
+  const fromVoice = v => { const x = voiceToTask(v, mid, mode0); setLabel(x.label || label); if (x.whos) setWhos(x.whos); setWhen(x.when); setMds(x.mds); if (x.every) setEvery(x.every); if (x.date) setDate(x.date); };
   const flip = (arr, set, v) => set(arr.indexOf(v) >= 0 ? (arr.length > 1 ? arr.filter(x => x !== v) : arr) : arr.concat([v]));
   const allOn = whos.length === MEMBERS.length;
   const slotsSel = when === 'once' && mds.indexOf('tag') >= 0 ? ['tag'] : mds.filter(x => x !== 'tag');
@@ -1310,6 +1389,8 @@ function PersonTaskForm({ mid, mode0, r, onClose }){
     onClick=${() => { if (id === 'tag') { setMds(['tag']); return; } const base = mds.filter(x => x !== 'tag'); if (base.indexOf(id) >= 0) { if (base.length > 1) setMds(base.filter(x => x !== id)); } else setMds(base.concat([id])); }}>${txt}</button>`;
   return html`<${Sheet} title="Neue Aufgabe" onClose=${onClose}>
     <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
+      ${I.heard ? html`<div class="hint">Verstanden: „${I.heard}“ – bitte kurz prüfen.</div>` : null}
+      <div class="row" style="justify-content:flex-end;margin-bottom:-8px"><${VoiceAdd} label="Einsprechen" onResult=${fromVoice} /></div>
       <label class="field">Was?<input id="pt-label" value=${label} onInput=${e => setLabel(e.target.value)} placeholder="z. B. Zimmer aufräumen" /></label>
       <div class="field">Für wen? (mehrere antippen möglich)
         <div class="row" style="gap:8px">
@@ -1408,9 +1489,11 @@ function Kalender({ now }){
     <//>` : null}
     ${sheet && sheet.kind === 'todo' ? html`<${TodoClaim} t=${todos.find(x => x.id === sheet.t.id) || sheet.t} ds=${sheet.ds} onClose=${() => setSheet(null)} />` : null}`;
 }
-function EventForm({ date, onClose, kind0, fixed }){
+function EventForm({ date, onClose, kind0, fixed, init }){
   const [kind, setKind] = useState(kind0 || 'event');
-  const [f, setF] = useState({ title:'', date, time:'', end:'', who:'familie', repeat:'none', stars:1 });
+  const [f, setF] = useState(Object.assign({ title:'', date, time:'', end:'', who:'familie', repeat:'none', stars:1 }, init || {}));
+  const fromVoice = r => setF(o => Object.assign({}, o, { title: r.title || o.title, date: r.date || o.date, time: r.time || o.time, end: r.end || o.end,
+    who: r.who && r.who.length === 1 ? r.who[0] : o.who, repeat: r.repeat || o.repeat, every: r.every || o.every }));
   const up = (k, v) => setF(Object.assign({}, f, { [k]: v }));
   const todo = kind === 'todo';
   const save = e => { e.preventDefault(); if (!f.title.trim() || !f.date) return;
@@ -1423,6 +1506,8 @@ function EventForm({ date, onClose, kind0, fixed }){
         <button type="button" aria-pressed=${todo} onClick=${() => setKind('todo')}><${Icon} n="star" size=${20} />Aufgabe für alle</button>
       </div>`}
       ${todo ? html`<div class="sub" style="font-size:14px">Gehört niemandem fest. Wer sie erledigt, tippt sich ein und bekommt die Sterne.</div>` : null}
+      ${init && init.heard ? html`<div class="hint">Verstanden: „${init.heard}“ – bitte kurz prüfen.</div>` : null}
+      <div class="row" style="justify-content:flex-end;margin-bottom:-8px"><${VoiceAdd} label="Einsprechen" onResult=${fromVoice} /></div>
       <label class="field">Was?<input id="ev-title" value=${f.title} onInput=${e => up('title', e.target.value)} placeholder=${todo ? 'z. B. Müll rausbringen' : 'z. B. Elternabend'} /></label>
       <div class="row" style="align-items:flex-start">
         <div style="flex:2 1 240px;min-width:0"><${DateField} label=${todo ? (f.repeat === 'none' ? 'Ab wann?' : 'Erstes Mal') : 'Datum'} value=${f.date} onChange=${v => up('date', v)} /></div>
