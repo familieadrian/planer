@@ -317,6 +317,19 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 .colhead .addbtn{margin-left:auto;width:38px;height:38px;border-radius:14px;border:2px dashed var(--line);background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .task .when{font-size:11px;font-weight:800;color:var(--muted);display:block}
 .ev.ptev{border:2px solid transparent}
+/* ---------- PIN & Schloss ---------- */
+.pinov{position:fixed;inset:0;z-index:260;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:16px}
+.pinbox{background:var(--surface);border-radius:26px;padding:22px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;align-items:center;box-sizing:border-box}
+.pinbox h2{font-size:21px;text-align:center}
+.pindots{display:flex;gap:14px;height:24px}
+.pindots i{width:20px;height:20px;border-radius:50%;border:3px solid var(--muted);display:block}
+.pindots i.on{background:var(--accent);border-color:var(--accent)}
+.pinbox.bad .pindots{animation:pinshake .35s}
+@keyframes pinshake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pinkeys{display:grid;grid-template-columns:repeat(3,76px);gap:10px}
+.pinkeys button{height:68px;border-radius:18px;border:none;background:var(--surface-2);color:var(--fg);font-size:28px;font-weight:800}
+.lockmini{display:inline-flex;vertical-align:-2px;margin-left:4px}
+.avatar-tap{border:none;background:transparent;padding:0;border-radius:50%;cursor:pointer}
 </style>
 
 </head>
@@ -445,6 +458,20 @@ function backfillLog(){
   backfillRest();
 }
 
+/* ---------- PIN-Schutz ---------- */
+async function pinHash(who, kind, code){
+  const txt = 'fb:' + who + ':' + kind + ':' + code;
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
+  catch (e) { let h = 5381; for (let i = 0; i < txt.length; i++) h = ((h << 5) + h + txt.charCodeAt(i)) >>> 0; return 'd' + h.toString(16); }
+}
+const pinsDoc = () => (mem_ && mem_.docs['config/pins']) || {};
+const hasPin = who => !!(pinsDoc()[who] && pinsDoc()[who].pin);
+const pinAll = who => !!(pinsDoc()[who] && pinsDoc()[who].pin && pinsDoc()[who].all);
+let pinHost = null;
+const askPin = o => new Promise(res => { if (!pinHost) return res(o.mode === 'set' ? null : true); pinHost(Object.assign({}, o, { res })); });
+/* Prüft die PIN von "who" (oder deren Super-PIN oder die Super-PIN von Mama/Papa). Ohne PIN: frei. */
+async function needPin(who, why, superOnly){ if (!byId[who] || (!hasPin(who) && !superOnly)) return true; return askPin({ mode: 'check', who, why, superOnly }); }
+
 /* ---------- Offene Aufgaben (für alle) ---------- */
 const REPEATS = [['none','Einmalig'],['weekly','Jede Woche'],['daily','Jeden Tag']];
 const isRep = t => t.repeat === 'weekly' || t.repeat === 'daily';
@@ -534,6 +561,8 @@ const IC = {
   paw:'M8 13c-2 0-4 2-4 4s2 3 4 2 3-1 4-1 2 1 4 1 4 0 4-2-2-4-4-4-3 2-4 2-2-2-4-2zM7 9a1.5 2 0 1 0 0 .01M17 9a1.5 2 0 1 0 0 .01M10 6a1.5 2 0 1 0 0 .01M14 6a1.5 2 0 1 0 0 .01',
   bus:'M6 3h12a2 2 0 0 1 2 2v11H4V5a2 2 0 0 1 2-2zM4 10h16M7 16v3M17 16v3M8 13h.01M16 13h.01',
   trophy:'M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 13v3M9 16h6v4H9zM7 20h10',
+  lock:'M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3M12 15v2',
+  unlock:'M6 11h12v10H6zM8 11V8a4 4 0 0 1 7.5-2M12 15v2',
   music:'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zM20 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3z'
 };
 const TASK_ICONS = ['shirt','tooth','bed','bowl','shoe','bag','lunch','dish','bin','car','book','basket','fork','pencil','drop','moon','blocks','paw','music','star'];
@@ -938,12 +967,79 @@ function Todos({ today }){
       return html`<button type="button" class=${'todo' + (who ? ' done' : '')} onClick=${() => setSel(t)} style=${who ? 'background:' + mt(who) + ';border-color:' + mc(who) : ''}
         aria-label=${t.title + (who ? ', erledigt von ' + names(ws) : ', offen')}>
         ${who ? html`<span style="display:flex">${ws.map((w, i) => html`<span style=${i ? 'margin-left:-12px' : ''}><${Avatar} id=${w} size=${36} ring=${true} /></span>`)}</span>` : html`<span class="tb"></span>`}
-        <span style="display:flex;flex-direction:column;gap:2px"><span>${t.title}</span>
-          <span class="ts">${who ? 'erledigt von ' + names(ws) : Array.from({ length: t.stars || 1 }, () => html`<${Star} size=${14} />`)}${t.repeat === 'weekly' ? ' · jede Woche' : t.repeat === 'daily' ? ' · jeden Tag' : ''}</span></span>
+        <span style="display:flex;flex-direction:column;gap:2px"><span>${t.title}${t.lockedBy && byId[t.lockedBy] ? html`<span class="lockmini" title=${'reserviert für ' + byId[t.lockedBy].name}><${Icon} n="lock" size=${14} /></span>` : null}</span>
+          <span class="ts">${who ? 'erledigt von ' + names(ws) : t.lockedBy && byId[t.lockedBy] ? 'reserviert für ' + byId[t.lockedBy].name + ' · ' : ''}${who ? '' : Array.from({ length: t.stars || 1 }, () => html`<${Star} size=${14} />`)}${t.repeat === 'weekly' ? ' · jede Woche' : t.repeat === 'daily' ? ' · jeden Tag' : ''}</span></span>
       </button>`; })}</div>` : html`<div class="sub" style="font-size:14px">Gerade nichts offen.</div>`}
   </section>
   ${sel ? html`<${TodoClaim} t=${sel} ds=${today} onClose=${() => setSel(null)} />` : null}
   ${add ? html`<${EventForm} date=${today} kind0=${add} fixed=${true} onClose=${() => setAdd(false)} />` : null}`;
+}
+function PinPad({ mode, who, why, title, superOnly, onDone }){
+  const [code, setCode] = useState(''); const [bad, setBad] = useState(false);
+  const check = async c => {
+    const P = pinsDoc(); const me = P[who] || {};
+    const cands = [];
+    if (!superOnly && me.pin) cands.push([who, 'pin', me.pin]);
+    if (me.sup) cands.push([who, 'sup', me.sup]);
+    MEMBERS.filter(m => !m.kid && m.id !== who).forEach(m => { const x = P[m.id]; if (x && x.sup) cands.push([m.id, 'sup', x.sup]); });
+    if (!cands.length) return true;
+    for (const k of cands) { if (await pinHash(k[0], k[1], c) === k[2]) return true; }
+    return false; };
+  const press = async d => { if (d === 'del') { setCode(code.slice(0, -1)); return; }
+    const c = (code + d).slice(0, 4); setCode(c); setBad(false);
+    if (c.length === 4) { if (mode === 'set') { setTimeout(() => onDone(c), 120); return; }
+      const ok = await check(c); if (ok) setTimeout(() => onDone(true), 120); else { setBad(true); setTimeout(() => setCode(''), 350); } } };
+  const head = title || (superOnly ? 'Super-PIN' : 'PIN') + ' von ' + (byId[who] ? byId[who].name : '');
+  return html`<div class="pinov" onClick=${e => { if (e.target === e.currentTarget) onDone(mode === 'set' ? null : false); }}>
+    <div class=${'pinbox' + (bad ? ' bad' : '')} role="dialog" aria-label=${head}>
+      ${who && byId[who] ? html`<${Avatar} id=${who} size=${56} ring=${true} />` : null}
+      <h2>${head}</h2>
+      ${why ? html`<div class="sub" style="font-size:14px;text-align:center">${why}</div>` : null}
+      <div class="pindots" aria-label=${code.length + ' von 4 Ziffern'}>${[0,1,2,3].map(i => html`<i class=${i < code.length ? 'on' : ''}></i>`)}</div>
+      ${bad ? html`<div class="hint warn" role="alert" style="padding:6px 12px">Falsche PIN</div>` : null}
+      <div class="pinkeys">${['1','2','3','4','5','6','7','8','9','x','0','del'].map(k => k === 'x'
+        ? html`<button type="button" aria-label="Abbrechen" onClick=${() => onDone(mode === 'set' ? null : false)} style="font-size:15px">Abbr.</button>`
+        : k === 'del' ? html`<button type="button" aria-label="Löschen" onClick=${() => press('del')}><${Icon} n="left" size=${24} /></button>`
+        : html`<button type="button" onClick=${() => press(k)}>${k}</button>`)}</div>
+      ${mode === 'check' && !superOnly ? html`<div class="sub" style="font-size:12px;text-align:center">PIN vergessen? Die Super-PIN von ${byId[who] ? byId[who].name : ''} oder von Mama/Papa geht auch.</div>` : null}
+    </div></div>`;
+}
+function PinHost(){
+  const [q, setQ] = useState(null);
+  useEffect(() => { pinHost = setQ; return () => { pinHost = null; }; }, []);
+  if (!q) return null;
+  return html`<${PinPad} key=${Date.now()} ...${q} onDone=${v => { setQ(null); q.res(v); }} />`;
+}
+function Profile({ id, onClose }){
+  const pins = useDoc('config/pins');
+  const me = (pins || {})[id] || {};
+  const m = byId[id];
+  const setNew = async (kind, label) => {
+    const a = await askPin({ mode: 'set', who: id, title: 'Neue ' + label, why: '4 Ziffern antippen' }); if (!a) return;
+    const b = await askPin({ mode: 'set', who: id, title: label + ' wiederholen' }); if (!b) return;
+    if (a !== b) { toast('Die beiden Eingaben waren verschieden – bitte nochmal.'); return; }
+    const P = Object.assign({}, pinsDoc()); P[id] = Object.assign({}, P[id] || {}, { [kind]: await pinHash(id, kind, a) });
+    S.set('config/pins', P); toast(label + ' gespeichert'); };
+  const change = async (kind, label) => { if (me[kind] && !(await needPin(id, label + ' ändern', kind === 'sup' || !me.pin))) return; setNew(kind, label); };
+  const setAll = async v => { if (!(await needPin(id, v ? 'Schutz einschalten' : 'Schutz ausschalten'))) return;
+    const P = Object.assign({}, pinsDoc()); P[id] = Object.assign({}, P[id] || {}, { all: v }); S.set('config/pins', P); };
+  const remove = async () => { if (!(await needPin(id, 'PIN entfernen', true))) return;
+    const P = Object.assign({}, pinsDoc()); P[id] = Object.assign({}, P[id] || {}); delete P[id].pin; P[id].all = false; S.set('config/pins', P); toast('PIN entfernt'); };
+  return html`<${Sheet} title=${'Profil von ' + m.name} onClose=${onClose}>
+    <div class="row"><${Avatar} id=${id} size=${60} ring=${true} /><div><h2 style="font-size:22px">${m.name}</h2><div class="sub" style="font-size:14px">${me.pin ? 'PIN ist festgelegt' : 'Noch keine PIN'}${me.sup ? ' · Super-PIN festgelegt' : ''}</div></div></div>
+    <div class="card" style="background:var(--surface-2)">
+      <h3 style="font-size:17px;display:flex;align-items:center;gap:8px"><${Icon} n="lock" size=${20} />PIN</h3>
+      <div class="sub" style="font-size:14px">Mit der PIN bestätigt ${m.name} eigene Aufgaben. Aufgaben mit Schloss kann dann niemand anderes abhaken, verschieben oder wegnehmen.</div>
+      <button type="button" class="btn" onClick=${() => change('pin', 'PIN')}>${me.pin ? 'PIN ändern' : 'PIN festlegen'}</button>
+      ${me.pin ? html`<label class="check" style="display:flex;gap:10px;align-items:center;font-weight:800"><input type="checkbox" checked=${!!me.all} onChange=${e => setAll(e.target.checked)} style="width:26px;height:26px" />Alle meine Aufgaben nur mit PIN abhaken</label>` : null}
+    </div>
+    <div class="card" style="background:var(--surface-2)">
+      <h3 style="font-size:17px;display:flex;align-items:center;gap:8px"><${Icon} n="star" size=${20} />Super-PIN</h3>
+      <div class="sub" style="font-size:14px">Die Super-PIN braucht man, um die PIN zu ändern oder zu entfernen – und falls die PIN vergessen wurde.${m.kid ? '' : ' Die Super-PIN von Mama und Papa öffnet außerdem alles in der Familie.'}</div>
+      <button type="button" class="btn soft" onClick=${() => change('sup', 'Super-PIN')}>${me.sup ? 'Super-PIN ändern' : 'Super-PIN festlegen'}</button>
+    </div>
+    ${me.pin ? html`<button type="button" class="btn ghost" onClick=${remove}>PIN entfernen</button>` : null}
+  <//>`;
 }
 function TodoClaim({ t, ds, onClose }){
   const points = useDoc('points/all');
@@ -954,10 +1050,15 @@ function TodoClaim({ t, ds, onClose }){
   const each = pick.length ? st / pick.length : st;
   const flip = id => setPick(pick.indexOf(id) >= 0 ? pick.filter(x => x !== id) : pick.concat([id]));
   const same = pick.length === prev.length && pick.every(x => prev.indexOf(x) >= 0);
-  const save = () => { if (same) { onClose(); return; } if (points === undefined) { toast('Einen Moment, Sterne werden noch geladen …'); return; }
-    claimTodo(t, ds, pick, points);
+  const res = t.lockedBy && byId[t.lockedBy] ? t.lockedBy : null;
+  const save = async () => { if (same) { onClose(); return; } if (points === undefined) { toast('Einen Moment, Sterne werden noch geladen …'); return; }
+    if (res && !(pick.length === 1 && pick[0] === res) && !(await needPin(res, 'Reserviert für ' + byId[res].name + ' – zum Ändern PIN von ' + byId[res].name))) return;
+    for (const w of pick.concat(prev).filter((x, i, a) => a.indexOf(x) === i)) { if (pinAll(w) && !(await needPin(w, 'Bestätigen für ' + byId[w].name))) return; }
+    const fresh = Object.assign({ id: t.id }, mem_.docs['todos/' + t.id] || t);
+    claimTodo(fresh, ds, pick, mem_.docs['points/all'] || points);
     toast(pick.length ? 'Super, ' + names(pick) + '! ' + (pick.length > 1 ? 'Je +' : '+') + fmtS(each) + (each === 1 ? ' Stern' : ' Sterne') : 'Wieder offen'); onClose(); };
   return html`<${Sheet} title=${t.title} onClose=${onClose}>
+    ${res ? html`<div class="hint" style="display:flex;align-items:center;gap:8px"><${Icon} n="lock" size=${18} />Reserviert für ${byId[res].name} – andere brauchen die PIN von ${byId[res].name}.</div>` : null}
     <div class="sub" style="font-size:16px">Wer hat mitgemacht? Alle antippen, die geholfen haben. ${st === 1 ? 'Der 1 Stern wird' : 'Die ' + st + ' Sterne werden'} gerecht aufgeteilt.</div>
     <div class="claim">${MEMBERS.map(m => { const on = pick.indexOf(m.id) >= 0;
       return html`<button type="button" class="claimbtn" aria-pressed=${on} onClick=${() => flip(m.id)} style=${on ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : ''}>
@@ -965,6 +1066,8 @@ function TodoClaim({ t, ds, onClose }){
     <button type="button" class="btn" onClick=${save} disabled=${!pick.length && !prev.length}>${pick.length ? 'Erledigt von ' + names(pick) + (pick.length > 1 ? ' · je ' + fmtS(each) + ' Sterne' : '') : prev.length ? 'Doch nicht erledigt' : 'Bitte Person antippen'}</button>
     ${confirm ? html`<div class="row"><span style="font-weight:800">Aufgabe ganz löschen?</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => { S.del('todos/' + t.id); onClose(); }}>Löschen</button><button type="button" class="btn small ghost" onClick=${() => setConfirm(false)}>Nein</button></div>`
       : html`<button type="button" class="btn ghost" onClick=${() => setConfirm(true)}>Aufgabe löschen</button>`}
+    ${res ? html`<button type="button" class="btn ghost" onClick=${async () => { if (!(await needPin(res, 'Reservierung aufheben'))) return; const b = Object.assign({}, mem_.docs['todos/' + t.id] || {}); delete b.lockedBy; S.set('todos/' + t.id, b); toast('Reservierung aufgehoben'); onClose(); }}><${Icon} n="unlock" size=${18} />Reservierung aufheben</button>`
+      : html`<div class="field">Mit Schloss für jemanden reservieren (braucht eine PIN):<div class="row" style="gap:6px">${MEMBERS.filter(m => hasPin(m.id)).map(m => html`<button type="button" class="chip" onClick=${async () => { if (!(await needPin(m.id, '„' + t.title + '“ für ' + m.name + ' reservieren'))) return; const b = Object.assign({}, mem_.docs['todos/' + t.id] || {}, { lockedBy: m.id }); S.set('todos/' + t.id, b); toast('Reserviert für ' + m.name); onClose(); }}><${Icon} n="lock" size=${14} /> ${m.name}</button>`)}${MEMBERS.some(m => hasPin(m.id)) ? null : html`<span class="sub" style="font-size:13px">Noch niemand hat eine PIN. Auf „Heute“ auf einen Namen tippen, um sie festzulegen.</span>`}</div></div>`}
   <//>`;
 }
 function BusAmpel({ buses }){
@@ -1009,12 +1112,14 @@ function Heute({ now }){
   const chips = events.filter(e => e.date === today).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
   const soonExams = exams.filter(x => { const n = daysUntil(x.datum, now); return n >= 0 && n <= 3; }).sort((a,b) => a.datum.localeCompare(b.datum));
 
-  const toggle = (mid, i) => {
+  const toggle = async (mid, i) => {
+    const tk = ((r[mode] || {})[mid] || [])[i];
+    if (!locked && tk && (tk.lock || pinAll(mid)) && !(await needPin(mid, '„' + tk.label + '“ bestätigen'))) return;
     if (locked) { toast(past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei – hier kann nichts mehr abgehakt werden.' : SLOTS[slotIdx(mode)].name + '-Aufgaben kann man ab ' + SLOTS[slotIdx(mode)].from + ' Uhr abhaken.'); return; }
     const k = mid + '-' + mode + '-' + i;
-    const c = Object.assign({}, checks || {}); const was = !!c[k]; c[k] = !was;
+    const c = Object.assign({}, mem_.docs['checks/' + rday] || {}); const was = !!c[k]; c[k] = !was;
     S.set('checks/' + rday, c);
-    { givePoints(points, { [mid]: was ? -1 : 1 });
+    { givePoints(mem_.docs['points/all'] || {}, { [mid]: was ? -1 : 1 });
       const lbl = ((r[mode] || {})[mid] || [])[i]; const what = lbl ? lbl.label : 'Routine';
       if (was) { const hit = logAll().filter(e => e.kind === 'routine' && e.who === mid && e.date === rday && e.what === what)[0]; if (hit) S.del('starlog/' + hit.id); }
       else logAdd({ who: mid, stars: 1, what, kind: 'routine', mode, date: rday }); }
@@ -1023,18 +1128,31 @@ function Heute({ now }){
     const next = copyR(r);
     next[mode][mid] = list; S.set('config/routines', next);
   };
-  const togglePT = t => { if (t.slot && (locked || t.date !== rday)) { toast(past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei – hier kann nichts mehr abgehakt werden.' : 'Das kann man erst ' + SLOTS[slotIdx(t.slot)].adv + ' abhaken.'); return; }
+  const lockTask = async (mid, i) => { const list = ((r[mode] || {})[mid] || []).slice(); const t = list[i]; if (!t) return;
+    if (!hasPin(mid)) { toast(byId[mid].name + ' braucht zuerst eine PIN – Profil öffnen (auf den Namen tippen).'); return; }
+    if (!(await needPin(mid, t.lock ? 'Schloss öffnen' : 'Schloss setzen'))) return;
+    list[i] = Object.assign({}, t, { lock: !t.lock }); setList(mid, list); toast(t.lock ? 'Schloss entfernt' : '„' + t.label + '“ ist jetzt geschützt'); };
+  const delTask = async (mid, i) => { const list = ((r[mode] || {})[mid] || []); const t = list[i];
+    if (t && t.lock && !(await needPin(mid, 'Geschützte Aufgabe löschen'))) return; setList(mid, list.filter((x, j) => j !== i)); };
+  const lockPT = async t => { if (!hasPin(t.who)) { toast(byId[t.who].name + ' braucht zuerst eine PIN – Profil öffnen (auf den Namen tippen).'); return; }
+    if (!(await needPin(t.who, t.lock ? 'Schloss öffnen' : 'Schloss setzen'))) return; const b = Object.assign({}, t, { lock: !t.lock }); delete b.id; S.set('ptasks/' + t.id, b); };
+  const delPT = async t => { if (t.lock && !(await needPin(t.who, 'Geschützte Aufgabe löschen'))) return; S.del('ptasks/' + t.id); };
+  const [prof, setProf] = useState(null);
+  const togglePT = async t => { if (!(t.slot && (locked || t.date !== rday)) && (t.lock || pinAll(t.who)) && !(await needPin(t.who, '„' + t.label + '“ bestätigen'))) return;
+    if (t.slot && (locked || t.date !== rday)) { toast(past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei – hier kann nichts mehr abgehakt werden.' : 'Das kann man erst ' + SLOTS[slotIdx(t.slot)].adv + ' abhaken.'); return; }
     const body = Object.assign({}, t); delete body.id; const was = !!t.done; body.done = !was; body.doneOn = was ? null : today; S.set('ptasks/' + t.id, body);
-    { givePoints(points, { [t.who]: was ? -1 : 1 }); if (was) logDrop(e => e.ptask === t.id); else logAdd({ who: t.who, stars: 1, what: t.label, kind: 'ptask', ptask: t.id, date: today }); } };
+    { givePoints(mem_.docs['points/all'] || {}, { [t.who]: was ? -1 : 1 }); if (was) logDrop(e => e.ptask === t.id); else logAdd({ who: t.who, stars: 1, what: t.label, kind: 'ptask', ptask: t.id, date: today }); } };
   /* Aufgabe lange gedrückt halten und zu einer anderen Person ziehen */
   const [drag, setDrag] = useState(null);
   const press = useRef(null); const dragRef = useRef(null); const skipClick = useRef(false);
-  const moveTask = (from, i, to) => {
-    const next = copyR(r);
+  const moveTask = async (from, i, to) => {
+    const lt = ((r[mode] || {})[from] || [])[i];
+    if (lt && lt.lock && !(await needPin(from, '„' + lt.label + '“ hat ein Schloss – zum Verschieben PIN von ' + byId[from].name))) return;
+    const next = copyR(mem_.docs['config/routines'] || r);
     const src = ((next[mode] || {})[from] || []).slice(); const t = src.splice(i, 1)[0]; if (!t) return;
     const dst = ((next[mode] || {})[to] || []).concat([t]);
     next[mode][from] = src; next[mode][to] = dst; S.set('config/routines', next);
-    const c = Object.assign({}, checks || {}); const key = (m, j) => m + '-' + mode + '-' + j; const was = !!c[key(from, i)];
+    const c = Object.assign({}, mem_.docs['checks/' + rday] || {}); const key = (m, j) => m + '-' + mode + '-' + j; const was = !!c[key(from, i)];
     for (let j = i; j <= src.length; j++) { if (c[key(from, j + 1)]) c[key(from, j)] = true; else delete c[key(from, j)]; }
     if (was) c[key(to, dst.length - 1)] = true; else delete c[key(to, dst.length - 1)];
     S.set('checks/' + rday, c);
@@ -1091,8 +1209,8 @@ function Heute({ now }){
         const all = tot > 0 && n === tot;
         return html`<section class=${'col' + (drag && drag.over === m.id && drag.mid !== m.id ? ' dropover' : '')} data-mid=${m.id} aria-label=${m.name}>
           <div class="colhead">
-            <span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${m.name[0]}</span>
-            <div style="min-width:0"><div class="colname">${m.name}</div>
+            <button type="button" class="avatar-tap" aria-label=${'Profil von ' + m.name + ' öffnen'} onClick=${() => setProf(m.id)}><span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${m.name[0]}</span></button>
+            <div style="min-width:0"><div class="colname" role="button" tabindex="0" onClick=${() => setProf(m.id)} style="cursor:pointer">${m.name}${pinsDoc()[m.id] && pinsDoc()[m.id].pin ? html`<span class="lockmini"><${Icon} n="lock" size=${14} /></span>` : null}</div>
               ${m.kid ? html`<div class="stars"><${Star} />${fmtS((points && points[m.id]) || 0)} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}${points && points[m.id] ? html` · <${Star} size=${14} />${fmtS(points[m.id])}` : null}</div>`}</div>
             <button type="button" class="addbtn" aria-label=${'Aufgabe für ' + m.name + ' hinzufügen'} title="Aufgabe hinzufügen" onClick=${() => setAddFor(m.id)}><${Icon} n="plus" size=${22} /></button>
           </div>
@@ -1100,10 +1218,10 @@ function Heute({ now }){
             return html`<div style="display:flex;gap:6px;align-items:center">
               <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${() => togglePT(t)} style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed') + (t.slot && locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon || 'star'} size=${28} color=${mc(m.id)} /></span>
-                <span class="lbl">${t.label}<span class="when" style=${late ? 'color:var(--warn-ink)' : ''}>${late ? 'seit ' + WD[fromIso(t.date).getDay()] + ' ' + dm(fromIso(t.date)) : t.slot ? 'nur heute ' + SLOTS[slotIdx(t.slot)].adv : 'nur heute'}</span></span>
+                <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}<span class="when" style=${late ? 'color:var(--warn-ink)' : ''}>${late ? 'seit ' + WD[fromIso(t.date).getDay()] + ' ' + dm(fromIso(t.date)) : t.slot ? 'nur heute ' + SLOTS[slotIdx(t.slot)].adv : 'nur heute'}</span></span>
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
               </button>
-              ${edit ? html`<button type="button" class="iconbtn" aria-label=${t.label + ' löschen'} onClick=${() => S.del('ptasks/' + t.id)}><${Icon} n="x" size=${18} /></button>` : null}
+              ${edit ? html`<button type="button" class="iconbtn" aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockPT(t)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${18} /></button><button type="button" class="iconbtn" aria-label=${t.label + ' löschen'} onClick=${() => delPT(t)}><${Icon} n="x" size=${18} /></button>` : null}
             </div>`; })}
           ${list.map((t, i) => { const d = !!(checks && checks[m.id + '-' + mode + '-' + i]);
             return html`<div style="display:flex;gap:6px;align-items:center">
@@ -1111,10 +1229,10 @@ function Heute({ now }){
                 onPointerDown=${e => startPress(e, m.id, i, t)} onContextMenu=${e => e.preventDefault()} onClick=${() => { if (skipClick.current) return; toggle(m.id, i); }}
                 style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : '') + (locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon} size=${28} color=${mc(m.id)} /></span>
-                <span class="lbl">${t.label}</span>
+                <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}</span>
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
               </button>
-              ${edit ? html`<button type="button" class="iconbtn" aria-label=${t.label + ' entfernen'} onClick=${() => setList(m.id, list.filter((x,j) => j !== i))}><${Icon} n="x" size=${18} /></button>` : null}
+              ${edit ? html`<button type="button" class="iconbtn" aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockTask(m.id, i)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${18} /></button><button type="button" class="iconbtn" aria-label=${t.label + ' entfernen'} onClick=${() => delTask(m.id, i)}><${Icon} n="x" size=${18} /></button>` : null}
             </div>`; })}
           ${edit ? html`<${AddTask} onAdd=${t => setList(m.id, list.concat([t]))} />` : null}
           ${!list.length && !pts.length && !edit ? html`<div class="sub" style="font-size:14px">Keine Aufgaben. Mit + hinzufügen.</div>` : null}
@@ -1126,13 +1244,14 @@ function Heute({ now }){
         </section>`;
       })}
     </div>`}
+    ${prof ? html`<${Profile} id=${prof} onClose=${() => setProf(null)} />` : null}
     ${addFor ? html`<${PersonTaskForm} mid=${addFor} mode0=${mode} r=${r} onClose=${() => setAddFor(null)} />` : null}
     ${drag ? html`<div class="dragghost" style=${'left:' + drag.x + 'px;top:' + drag.y + 'px'} aria-hidden="true"><${Icon} n=${drag.t.icon} size=${24} color=${mc(drag.mid)} />${drag.t.label}${drag.over && drag.over !== drag.mid ? ' → ' + byId[drag.over].name : ''}</div>` : null}`;
 }
 function PersonTaskForm({ mid, mode0, r, onClose }){
   const [label, setLabel] = useState(''); const [icon, setIcon] = useState('star');
   const [when, setWhen] = useState('routine'); const [mds, setMds] = useState([mode0]);
-  const [whos, setWhos] = useState([mid]);
+  const [whos, setWhos] = useState([mid]); const [lk, setLk] = useState(false);
   const [date, setDate] = useState(iso(new Date()));
   const flip = (arr, set, v) => set(arr.indexOf(v) >= 0 ? (arr.length > 1 ? arr.filter(x => x !== v) : arr) : arr.concat([v]));
   const allOn = whos.length === MEMBERS.length;
@@ -1140,10 +1259,10 @@ function PersonTaskForm({ mid, mode0, r, onClose }){
   const save = e => { e.preventDefault(); const l = label.trim(); if (!l || !slotsSel.length) return;
     const nm = names(whos.length === MEMBERS.length ? [] : whos) || 'alle';
     if (when === 'routine') { const next = copyR(r);
-      whos.forEach(w => slotsSel.forEach(md => { next[md][w] = ((next[md] || {})[w] || []).concat([{ label: l, icon }]); }));
+      whos.forEach(w => slotsSel.forEach(md => { next[md][w] = ((next[md] || {})[w] || []).concat([lk ? { label: l, icon, lock: true } : { label: l, icon }]); }));
       S.set('config/routines', next);
       toast('„' + l + '“ steht jetzt jeden ' + slotsSel.map(md => SLOTS[slotIdx(md)].name).join(', ') + ' bei ' + (allOn ? 'allen' : nm)); }
-    else { whos.forEach(w => slotsSel.forEach(md => S.add('ptasks', { who: w, label: l, icon, date, slot: md === 'tag' ? null : md, done: false })));
+    else { whos.forEach(w => slotsSel.forEach(md => S.add('ptasks', Object.assign({ who: w, label: l, icon, date, slot: md === 'tag' ? null : md, done: false }, lk ? { lock: true } : {}))));
       toast('„' + l + '“ für ' + (allOn ? 'alle' : nm) + ' am ' + fromIso(date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' }) + ' eingetragen'); }
     onClose(); };
   const slotChip = (id, txt) => html`<button type="button" class="chip" aria-pressed=${slotsSel.indexOf(id) >= 0}
@@ -1168,6 +1287,7 @@ function PersonTaskForm({ mid, mode0, r, onClose }){
         ${SLOTS.map(x => slotChip(x.id, x.adv[0].toUpperCase() + x.adv.slice(1) + ' (' + x.from + (x.id === 'abend' ? '' : '–' + SLOTS[slotIdx(x.id) + 1].from) + ' Uhr)'))}
         ${when === 'once' ? slotChip('tag', 'Ganzer Tag') : null}</div></div>
       <div class="sub" style="font-size:13px">${when === 'once' && slotsSel[0] === 'tag' ? 'Bleibt stehen, bis sie abgehakt ist.' : 'Abhaken geht nur im gewählten Zeitraum. Ist er vorbei, fällt die Aufgabe raus und kann nicht mehr nachträglich abgehakt werden.'}</div>
+      <label class="check" style="display:flex;gap:10px;align-items:center;font-weight:800"><input type="checkbox" checked=${lk} onChange=${e => setLk(e.target.checked)} style="width:24px;height:24px" /><${Icon} n="lock" size=${18} />Mit Schloss: nur mit PIN der Person abhaken oder verschieben</label>
       <button class="btn" type="submit"><${Icon} n="plus" size=${20} />Hinzufügen${whos.length * slotsSel.length > 1 ? ' (' + whos.length * slotsSel.length + '×)' : ''}</button>
     </form>
   <//>`;
@@ -1766,8 +1886,8 @@ function StarStats({ id, now, points, week }){
       ${mine.length ? html`<div class="list">${shown.map(e => html`<div class="logli">
         <span class="lt"><b>${e.what}</b><span>${fromIso(e.date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' })} · ${e.kind === 'todo' ? 'Aufgabe für alle' + (e.team ? ' (mit ' + names(e.team.filter(x => x !== id)) + ')' : '') : e.kind === 'ptask' ? 'Einzelaufgabe' : e.kind === 'alt' ? 'gesammelt vor der Statistik – welche Aufgabe, ist nicht mehr bekannt' : 'Routine ' + (SLOTS[slotIdx(e.mode || 'morgen')] || SLOTS[0]).adv}</span></span>
         <span class="ls">${e.stars ? html`<${Star} size=${16} />+${fmtS(e.stars)}` : html`<span style="font-size:12px;color:var(--muted)">ohne Stern</span>`}</span>
-        ${fix === e.id ? html`<div class="row" style="gap:6px;width:100%"><span style="font-weight:800;font-size:14px">Wer hat es wirklich gemacht?</span>${MEMBERS.filter(m => m.id !== id).map(m => html`<button type="button" class="chip" onClick=${() => { logFix(e, m.id, points); setFix(null); }}>${m.name}</button>`)}<button type="button" class="chip" onClick=${() => setFix(null)}>Abbrechen</button></div>`
-          : del === e.id ? html`<div class="row" style="gap:6px"><span style="font-weight:800;font-size:14px">Wirklich abwählen? Die Sterne werden abgezogen.</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => { logFix(e, null, points); setDel(null); }}>Abwählen</button><button type="button" class="btn small ghost" onClick=${() => setDel(null)}>Nein</button></div>`
+        ${fix === e.id ? html`<div class="row" style="gap:6px;width:100%"><span style="font-weight:800;font-size:14px">Wer hat es wirklich gemacht?</span>${MEMBERS.filter(m => m.id !== id).map(m => html`<button type="button" class="chip" onClick=${async () => { if (!(await needPin(e.who, 'Eintrag von ' + byId[e.who].name + ' ändern'))) return; logFix(e, m.id, mem_.docs['points/all'] || points); setFix(null); }}>${m.name}</button>`)}<button type="button" class="chip" onClick=${() => setFix(null)}>Abbrechen</button></div>`
+          : del === e.id ? html`<div class="row" style="gap:6px"><span style="font-weight:800;font-size:14px">Wirklich abwählen? Die Sterne werden abgezogen.</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${async () => { if (!(await needPin(e.who, 'Eintrag von ' + byId[e.who].name + ' abwählen'))) return; logFix(e, null, mem_.docs['points/all'] || points); setDel(null); }}>Abwählen</button><button type="button" class="btn small ghost" onClick=${() => setDel(null)}>Nein</button></div>`
           : html`<button type="button" class="btn small ghost" onClick=${() => { setFix(e.id); setDel(null); }}>Ändern</button><button type="button" class="btn small ghost" style="color:var(--danger)" onClick=${() => { setDel(e.id); setFix(null); }}><${Icon} n="x" size=${16} />Abwählen</button>`}
       </div>`)}</div>
       ${mine.length > 12 ? html`<button type="button" class="btn small ghost" onClick=${() => setMore(!more)}>${more ? 'Weniger anzeigen' : 'Alle ' + mine.length + ' anzeigen'}</button>` : null}`
@@ -1830,6 +1950,7 @@ function App(){
 }
 render(html`<${App} />`, document.getElementById('root'));
 const tpBox = document.createElement('div'); document.body.appendChild(tpBox); render(html`<${TypePreview} />`, tpBox);
+const pinBox = document.createElement('div'); document.body.appendChild(pinBox); render(html`<${PinHost} />`, pinBox);
 /* Sichtbare Höhe merken, damit die Leiste unten immer zu sehen ist (auch wenn die Browserleiste ein-/ausfährt) */
 const setAppH = () => { const a = document.activeElement; if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return; document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px'); };
 setAppH(); window.addEventListener('resize', setAppH); window.addEventListener('orientationchange', () => setTimeout(setAppH, 300));
