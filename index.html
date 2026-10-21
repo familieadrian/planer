@@ -593,7 +593,7 @@ const pinAll = who => !!(pinsDoc()[who] && pinsDoc()[who].pin && pinsDoc()[who].
 let pinHost = null;
 const askPin = o => new Promise(res => { if (!pinHost) return res(o.mode === 'set' ? null : true); pinHost(Object.assign({}, o, { res })); });
 /* Prüft die PIN von "who" (oder deren Super-PIN oder die Super-PIN von Mama/Papa). Ohne PIN: frei. */
-async function needPin(who, why, superOnly){ if (!byId[who] || (!hasPin(who) && !superOnly)) return true; return askPin({ mode: 'check', who, why, superOnly }); }
+async function needPin(who, why, superOnly){ if (DEMO) return true; if (!byId[who] || (!hasPin(who) && !superOnly)) return true; return askPin({ mode: 'check', who, why, superOnly }); }
 
 /* ---------- Offene Aufgaben (für alle) ---------- */
 const REPEATS = [['none','Einmalig'],['weekly','Jede Woche'],['daily','Jeden Tag'],['interval','Alle … Wochen']];
@@ -874,6 +874,49 @@ async function startSync(){
   resolveReady(true);
 }
 mem_ = mem;
+/* ---------- Demo-Zugang: nur ansehen, Beispieldaten, nichts wird gespeichert ---------- */
+let DEMO = false;
+const DEMO_HASH = 'b5471835ee43833f1084854429a6a3affd874db35efacfe5106e73f55f136a11';
+async function demoOk(pw){ try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('fb-demo:' + pw)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('') === DEMO_HASH; } catch (e) { return false; } }
+function demoData(){
+  const t = new Date(); const D = n => iso(addDays(t, n)); const mon = monday(t); const W = n => iso(addDays(mon, n));
+  const d = {};
+  d['config/routines'] = {
+    morgen: { klaus:[{ label:'Müll rausbringen', icon:'bin' }, { label:'Kinder zur Schule', icon:'car' }], helena:[{ label:'Brotdosen packen', icon:'lunch' }],
+      dorothea:[{ label:'Anziehen', icon:'shirt' }, { label:'Zähne putzen', icon:'tooth' }, { label:'Ranzen checken', icon:'bag' }],
+      marlene:[{ label:'Anziehen', icon:'shirt' }, { label:'Frühstücken', icon:'bowl' }, { label:'Zähne putzen', icon:'tooth' }],
+      clemens:[{ label:'Anziehen', icon:'shirt' }, { label:'Schuhe an', icon:'shoe' }] },
+    mittag: { dorothea:[{ label:'Hausaufgaben', icon:'pencil', days:[1,2,3,4,5] }], marlene:[{ label:'Hausaufgaben', icon:'pencil', days:[1,2,3,4,5] }], clemens:[{ label:'Mittagsruhe', icon:'bed' }] },
+    abend: { klaus:[{ label:'Vorlesen', icon:'book' }, { label:'Wäsche wegräumen', icon:'shirt' }], helena:[{ label:'Essen planen', icon:'fork' }, { label:'Wäsche wegräumen', icon:'shirt' }],
+      dorothea:[{ label:'Duschen', icon:'drop' }, { label:'Zähne putzen', icon:'tooth' }, { label:'Wäsche wegräumen', icon:'shirt' }],
+      marlene:[{ label:'Aufräumen', icon:'blocks' }, { label:'Zähne putzen', icon:'tooth' }, { label:'Wäsche wegräumen', icon:'shirt' }],
+      clemens:[{ label:'Schlafanzug', icon:'moon' }, { label:'Zähne putzen', icon:'tooth' }] },
+    tag: { klaus:[{ label:'Hühner versorgen', icon:'paw' }] } };
+  d['checks/' + iso(t)] = { 'dorothea-morgen-0': true, 'marlene-morgen-0': true, 'marlene-morgen-1': true, 'klaus-morgen-0': true };
+  d['timetables/dorothea'] = { times:['8:00','8:50','9:55','10:45','11:45'], days:[['KLU','Deutsch','KLU','Kunst','Englisch'],[null,'Sport','Deutsch','Mathe',null],['Mathe','Deutsch','Sachkunde',null,null],[null,null,'Mathe','Musik','Sport'],['Deutsch','Mathe','Kunst',null,null]] };
+  d['timetables/marlene'] = { times:['8:00','8:50','9:55','10:45'], days:[['Mathe','Deutsch',null,null],['Deutsch','Mathe','Sport',null],[null,'Sport','Mathe','Deutsch'],['Mathe','Religion',null,null],[null,'Deutsch','Kunst',null]] };
+  d['events/e1'] = { title:'Zahnarzt', date:D(1), time:'15:00', end:'15:30', who:'dorothea' };
+  d['events/e2'] = { title:'Turnen', date:D(2), time:'16:00', end:'17:00', who:'marlene', rep:'w', every:1 };
+  d['events/e3'] = { title:'Elternabend', date:D(4), time:'19:30', who:'helena' };
+  d['events/e4'] = { title:'Oma kommt zu Besuch', date:D(6), who:'familie' };
+  d['exams/x1'] = { kid:'dorothea', fach:'Mathe', datum:D(3), thema:'Einmaleins' };
+  d['todos/t1'] = { title:'Spülmaschine ausräumen', date:D(-10), repeat:'daily', stars:2, done:{} };
+  d['todos/t2'] = { title:'Müll rausbringen', date:D(0), repeat:'none', stars:1, done:{} };
+  d['todos/t3'] = { title:'Tisch decken', date:D(-3), repeat:'daily', stars:1, done:{}, slot:'abend' };
+  d['ptasks/p1'] = { who:'klaus', label:'Auto waschen', icon:'car', date:D(-5), every:4, done:false };
+  d['mealplan/' + W(0)] = { frueh:[], mittag:[{ dish:'Spaghetti', art:'spaghetti', by:'clemens' }], abend:[{ dish:'Suppe', art:'suppe' }] };
+  d['mealplan/' + W(1)] = { frueh:[], mittag:[{ dish:'Fischstäbchen', art:'fisch' }], abend:[] };
+  d['mealplan/' + W(4)] = { frueh:[], mittag:[], abend:[{ dish:'Pizza', art:'pizza', by:'dorothea' }, { dish:'Pfannkuchen', art:'pfannkuchen', by:'marlene' }] };
+  d['mealplan/' + W(5)] = { frueh:[{ dish:'Pfannkuchen', art:'pfannkuchen' }], mittag:[], abend:[{ dish:'Burger', art:'burger' }] };
+  d['wishes/w1'] = { who:'clemens', dish:'Pommes', art:'pommes', meal:'mittag', createdAt:2 };
+  d['wishes/w2'] = { who:'marlene', dish:'Käsespätzle', art:'spaetzle', createdAt:1 };
+  d['shopping/s1'] = { name:'Milch', by:'helena', done:false }; d['shopping/s2'] = { name:'Brot', by:'klaus', done:false }; d['shopping/s3'] = { name:'Bananen', by:'clemens', done:true };
+  d['points/all'] = { klaus:6, helena:8, dorothea:27, marlene:14, clemens:9 };
+  d[weekDoc(t)] = { klaus:2, helena:3, dorothea:6, marlene:5, clemens:4 };
+  return d;
+}
+function startDemo(){ DEMO = true; mem.docs = demoData(); memNotify(); resolveReady(true); }
+const demoBlock = () => { toast('Demo-Zugang: Hier kann nur angeschaut werden.'); return Promise.resolve(); };
 /* ---------- Rückgängig: jede Änderung merkt sich den vorherigen Stand ---------- */
 const undoStack = []; let undoGroup = null; let undoQuiet = false;
 function recordUndo(p){
@@ -895,11 +938,13 @@ const S = {
     mem.subs.add(f); f(); return () => mem.subs.delete(f);
   },
   set(p, data){
+    if (DEMO) return demoBlock();
     recordUndo(p);
     mem.docs[p] = data; memNotify();
     return sb.from('docs').upsert({ path: p, col: colOf(p), data, updated_at: new Date().toISOString() }).then(r => { if (r.error) dbErr(r.error); });
   },
   del(p){
+    if (DEMO) return demoBlock();
     recordUndo(p);
     delete mem.docs[p]; memNotify();
     return sb.from('docs').delete().eq('path', p).then(r => { if (r.error) dbErr(r.error); });
@@ -932,6 +977,7 @@ function useNow(){
 /* ---------- Screenshots lesen (über eigene Supabase-Funktion) ---------- */
 function sampleErr(e){
   const c = e && e.code;
+  if (c === 'demo') return 'Im Demo-Zugang nicht möglich – hier kann nur angeschaut werden.';
   if (c === 'no_key') return 'Für das Bilderlesen fehlt noch der Schlüssel in Supabase (Anleitung Schritt 4).';
   if (c === 'no_function') return 'Die Funktion zum Bilderlesen ist noch nicht eingerichtet (Anleitung Schritt 4).';
   if (c === 'unauthorized') return 'Bitte neu anmelden.';
@@ -963,6 +1009,7 @@ function parseJson(t){
 }
 async function readImage(file, prompt){
   const image = await shrink(file);
+  if (DEMO) { demoBlock(); throw { code: 'demo' }; }
   const { data, error } = await sb.functions.invoke('read-image', { body: { prompt: prompt + '\nAntworte ausschließlich mit dem JSON, ohne weiteren Text.', image, media_type: 'image/jpeg' } });
   if (error) {
     const st = error.context && error.context.status;
@@ -2042,7 +2089,9 @@ function Check(){
 }
 
 /* ---------- Anmeldung ---------- */
-function Login({ onDone }){
+function Login({ onDone, onDemo }){
+  const [dpw, setDpw] = useState(''); const [derr, setDerr] = useState(''); const [showDemo, setShowDemo] = useState(false);
+  const goDemo = async () => { setDerr(''); if (await demoOk(dpw.trim())) onDemo(); else setDerr('Das Gast-Passwort stimmt nicht.'); };
   const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const go = async e => { e.preventDefault(); setBusy(true); setErr('');
     const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pw });
@@ -2056,6 +2105,14 @@ function Login({ onDone }){
       <label class="field">Passwort<input id="login-pw" type="password" autocomplete="current-password" value=${pw} onInput=${e => setPw(e.target.value)} /></label>
       ${err ? html`<div class="hint warn" role="alert">${err}</div>` : null}
       <button class="btn" type="submit" disabled=${busy}>${busy ? 'Anmelden …' : 'Anmelden'}</button>
+      <div style="border-top:2px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px">
+        ${showDemo ? html`<div class="sub" style="font-size:14px">Der Demo-Zugang zeigt das Board mit Beispieldaten. Man kann sich alles ansehen, aber nichts abhaken oder eintragen.</div>
+          <label class="field">Gast-Passwort<input id="demo-pw" type="password" autocomplete="off" value=${dpw} onInput=${e => setDpw(e.target.value)}
+            onKeyDown=${e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); goDemo(); } }} /></label>
+          ${derr ? html`<div class="hint warn" role="alert">${derr}</div>` : null}
+          <button type="button" class="btn soft" onClick=${goDemo}>Demo ansehen</button>`
+        : html`<button type="button" class="btn ghost" onClick=${() => setShowDemo(true)}><${Icon} n="star" size=${18} />Demo-Zugang (nur ansehen)</button>`}
+      </div>
     </form></div>`;
 }
 
@@ -2210,7 +2267,7 @@ function App(){
     <div>In der Datei <b>index.html</b> fehlen noch die Supabase-Adresse und der Schlüssel (Anleitung Schritt 3).</div></div>
     ${view === 'check' ? html`<${Check} />` : html`<a class="btn ghost" href="#check">Gerätecheck öffnen</a>`}</div>`;
   if (auth === 'wait') return html`<div class="loading" style="padding:24px">Familienboard wird geladen …</div>`;
-  if (auth === 'out') return html`<${Login} onDone=${() => setAuth('in')} />`;
+  if (auth === 'out') return html`<${Login} onDone=${() => setAuth('in')} onDemo=${() => { startDemo(); setReady(true); setAuth('demo'); }} />`;
   const V = view === 'check' ? Check : { heute: Heute, kalender: Kalender, schule: Schule, einkauf: Einkauf, essen: Essen, sterne: Sterne }[view];
   return html`<div class="app">
     <nav class="nav" aria-label="Hauptmenü">
@@ -2219,6 +2276,8 @@ function App(){
       <div class="sync">${ready ? 'Synchron auf allen Geräten' : 'Verbinde …'}<br /><a href="#check" style="width:auto;padding:4px 0;font-size:11px;display:inline">Gerätecheck</a></div>
     </nav>
     <main class="main">
+      ${auth === 'demo' ? html`<div class="hint warn" role="status" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><${Icon} n="star" size=${18} /><b>Demo-Zugang</b> – nur ansehen, mit Beispieldaten. Änderungen werden nicht gespeichert.
+        <button type="button" class="btn small ghost" style="min-height:36px" onClick=${() => location.reload()}>Demo beenden</button></div>` : null}
       ${loadErr ? html`<div class="hint warn" role="alert">${loadErr}</div>` : null}
       <${V} now=${now} />
     </main>
