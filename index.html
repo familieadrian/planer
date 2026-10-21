@@ -27,6 +27,7 @@
   --on-m:#FFFFFF;--scrim:rgba(20,24,32,.45);
   --m-klaus:#3B5BA9;--t-klaus:#E3EAF8;--m-helena:#B83E6B;--t-helena:#F8E3EC;--m-dorothea:#0E7C7B;--t-dorothea:#DDF2F1;
   --m-marlene:#C2570C;--t-marlene:#FCE9D9;--m-clemens:#3F7D20;--t-clemens:#E4F2DA;--m-familie:#5B6577;--t-familie:#EEF1F6;
+  --pm-blau:#3B5BA9;--pt-blau:#E3EAF8;--pm-beere:#B83E6B;--pt-beere:#F8E3EC;--pm-petrol:#0E7C7B;--pt-petrol:#DDF2F1;--pm-orange:#C2570C;--pt-orange:#FCE9D9;--pm-gruen:#3F7D20;--pt-gruen:#E4F2DA;--pm-lila:#6D4BB8;--pt-lila:#ECE6FA;--pm-rot:#B3362F;--pt-rot:#FBE3E1;--pm-braun:#8A5A2B;--pt-braun:#F3E8DC;--pm-himmel:#1F6FAF;--pt-himmel:#DFEFFB;--pm-oliv:#6B6000;--pt-oliv:#F3EFD0;--pm-pink:#A8328F;--pt-pink:#F8E2F4;--pm-grau:#4F5B6B;--pt-grau:#E8ECF1;
   --tone-0:#FBE3E1;--tone-1:#E1ECFB;--tone-2:#E8E5FA;--tone-3:#DFF1E5;--tone-4:#FFEFD3;--tone-5:#FAE3F1;--tone-6:#EAF3D8;--tone-7:#EFEBE5;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -37,6 +38,7 @@
   --on-m:#11151C;--scrim:rgba(0,0,0,.6);
   --m-klaus:#8FA8E8;--t-klaus:#24304A;--m-helena:#E58DB0;--t-helena:#3D2230;--m-dorothea:#5CC7C5;--t-dorothea:#173634;
   --m-marlene:#F0A060;--t-marlene:#3A2A1C;--m-clemens:#8FCB6B;--t-clemens:#22331A;--m-familie:#9AA4B5;--t-familie:#262E3A;
+  --pm-blau:#8FA8E8;--pt-blau:#24304A;--pm-beere:#E58DB0;--pt-beere:#3D2230;--pm-petrol:#5CC7C5;--pt-petrol:#173634;--pm-orange:#F0A060;--pt-orange:#3A2A1C;--pm-gruen:#8FCB6B;--pt-gruen:#22331A;--pm-lila:#B39AF0;--pt-lila:#2C2442;--pm-rot:#EE8A83;--pt-rot:#3D2220;--pm-braun:#D4A877;--pt-braun:#33281C;--pm-himmel:#7DBBEE;--pt-himmel:#1B2D3D;--pm-oliv:#D6C25A;--pt-oliv:#332F17;--pm-pink:#E68CD8;--pt-pink:#3A2036;--pm-grau:#A9B4C4;--pt-grau:#262D37;
   --tone-0:#3A2422;--tone-1:#1F2C40;--tone-2:#2A2742;--tone-3:#1D3326;--tone-4:#3A2F1A;--tone-5:#3A2232;--tone-6:#26311A;--tone-7:#2E2B27;
   color-scheme:dark}}
 :root[data-theme="dark"]{
@@ -47,6 +49,7 @@
   --on-m:#11151C;--scrim:rgba(0,0,0,.6);
   --m-klaus:#8FA8E8;--t-klaus:#24304A;--m-helena:#E58DB0;--t-helena:#3D2230;--m-dorothea:#5CC7C5;--t-dorothea:#173634;
   --m-marlene:#F0A060;--t-marlene:#3A2A1C;--m-clemens:#8FCB6B;--t-clemens:#22331A;--m-familie:#9AA4B5;--t-familie:#262E3A;
+  --pm-blau:#8FA8E8;--pt-blau:#24304A;--pm-beere:#E58DB0;--pt-beere:#3D2230;--pm-petrol:#5CC7C5;--pt-petrol:#173634;--pm-orange:#F0A060;--pt-orange:#3A2A1C;--pm-gruen:#8FCB6B;--pt-gruen:#22331A;--pm-lila:#B39AF0;--pt-lila:#2C2442;--pm-rot:#EE8A83;--pt-rot:#3D2220;--pm-braun:#D4A877;--pt-braun:#33281C;--pm-himmel:#7DBBEE;--pt-himmel:#1B2D3D;--pm-oliv:#D6C25A;--pt-oliv:#332F17;--pm-pink:#E68CD8;--pt-pink:#3A2036;--pm-grau:#A9B4C4;--pt-grau:#262D37;
   --tone-0:#3A2422;--tone-1:#1F2C40;--tone-2:#2A2742;--tone-3:#1D3326;--tone-4:#3A2F1A;--tone-5:#3A2232;--tone-6:#26311A;--tone-7:#2E2B27;
   color-scheme:dark}
 html,body{height:100%;margin:0}
@@ -75,7 +78,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .btn.soft{background:var(--accent-soft);color:var(--accent-ink)}
 .btn.small{min-height:40px;padding:0 14px;font-size:14px;border-radius:12px}
 .btn:disabled{opacity:.5;cursor:default}
-.iconbtn{width:44px;height:44px;flex-shrink:0;border:none;border-radius:12px;background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center}
+.iconbtn{width:44px;height:44px;flex-shrink:0;border:none;border-radius:12px;background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center}.iconbtn:disabled{opacity:.3}
 .chip{min-height:40px;padding:6px 14px;border-radius:999px;border:2px solid var(--line);background:var(--surface);font-size:14px;font-weight:800}
 .chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .seg{display:flex;background:var(--surface);border-radius:999px;padding:5px;gap:4px;border:1px solid var(--line)}
@@ -92,7 +95,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .tchip{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:700}
 .tchip.exam{background:var(--warn-soft);border-color:transparent;color:var(--warn-ink);font-weight:800}
 .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.cols{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:stretch;flex:1}
+.cols{display:grid;grid-template-columns:repeat(var(--ncols,5),minmax(0,1fr));gap:14px;align-items:stretch;flex:1}
 .col{background:var(--surface);border-radius:24px;padding:16px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .colhead{display:flex;align-items:center;gap:12px;padding-bottom:4px}
 .colhead .avatar{width:52px;height:52px;font-size:22px;border:3px solid}
@@ -137,6 +140,10 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .list{display:flex;flex-direction:column;gap:8px}
 .li{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:16px;background:var(--surface-2);min-width:0}
 .li .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.li.adm{flex-wrap:wrap}.li.adm .tx span{font-size:13px;color:var(--muted)}.li.dev .tx{flex:1 1 180px}
+.swatch{width:44px;height:44px;border-radius:50%;border:3px solid transparent;padding:6px;display:flex;align-items:center;justify-content:center;cursor:pointer}.swatch span{width:100%;height:100%;border-radius:50%;display:block}.swatch:disabled{opacity:.25;cursor:not-allowed}
+.avatar-btn:disabled{cursor:not-allowed}
+.whopick{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}.whocard{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;border-radius:20px;background:var(--surface-2);border:2px solid var(--line);font-size:17px;color:var(--fg);cursor:pointer;font-family:inherit}.whocard:hover{border-color:var(--accent)}
 .li .tx b{font-size:16px}
 .li .tx span{font-size:13px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .count{flex-shrink:0;font-size:13px;font-weight:800;padding:5px 10px;border-radius:999px;background:var(--surface);color:var(--muted)}
@@ -194,7 +201,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
   .nav>a{flex:1;max-width:180px;padding:12px 0;font-size:16px}
   .nav .sync{margin:0;align-self:center;width:110px}
   .main{order:1;flex:1;min-height:0}
-  .cols{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+  .cols{grid-template-columns:repeat(var(--ncols,5),minmax(0,1fr));gap:10px}
   .col{padding:14px 10px}
   .task{position:relative;flex-direction:column;justify-content:center;text-align:center;gap:8px;min-height:120px;padding:12px 6px}
   .task .ic{width:56px;height:56px}
@@ -476,19 +483,37 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 const { html, render, useState, useEffect, useRef } = htmPreact;
 
 /* ---------- Familie ---------- */
-const MEMBERS = [
-  { id:'klaus', name:'Klaus', role:'Papa', kid:false },
-  { id:'helena', name:'Helena', role:'Mama', kid:false },
-  { id:'dorothea', name:'Dorothea', kid:true, school:true },
-  { id:'marlene', name:'Marlene', kid:true, school:true, speak:true },
-  { id:'clemens', name:'Clemens', kid:true, speak:true }
+/* Farbvorschläge für Personen (hell/dunkel als CSS-Variablen --pm-<k>/--pt-<k>) */
+const PALETTE = [['blau','Blau'],['beere','Beere'],['petrol','Petrol'],['orange','Orange'],['gruen','Grün'],['lila','Lila'],['rot','Rot'],['braun','Braun'],['himmel','Himmelblau'],['oliv','Oliv'],['pink','Pink'],['grau','Grau']];
+const DEFAULT_MEMBERS = [
+  { id:'klaus', name:'Klaus', role:'Papa', kid:false, color:'blau', short:'K' },
+  { id:'helena', name:'Helena', role:'Mama', kid:false, color:'beere', short:'H' },
+  { id:'dorothea', name:'Dorothea', kid:true, school:true, color:'petrol', short:'D', aliases:'doro' },
+  { id:'marlene', name:'Marlene', kid:true, school:true, speak:true, color:'orange', short:'M' },
+  { id:'clemens', name:'Clemens', kid:true, speak:true, color:'gruen', short:'C' }
 ];
-const WHO = MEMBERS.concat([{ id:'familie', name:'Alle' }]);
-const byId = {}; WHO.forEach(m => byId[m.id] = m);
-const mc = id => 'var(--m-' + id + ')';
-const mt = id => 'var(--t-' + id + ')';
-const ini = id => (byId[id] ? byId[id].name[0] : '?');
-const SCHOOL = MEMBERS.filter(m => m.school);
+/* Diese Listen werden beim Laden von config/members neu befüllt (gleiche Objekte, damit alle Stellen aktuell bleiben) */
+const MEMBERS = [], WHO = [], SCHOOL = [], byId = {};
+const PNAMES = {};
+let membersSig = '';
+function applyMembers(doc){
+  const list = doc && Array.isArray(doc.list) && doc.list.some(m => !m.hidden) ? doc.list : DEFAULT_MEMBERS;
+  const sig = JSON.stringify(list); if (sig === membersSig) return false; membersSig = sig;
+  MEMBERS.length = 0; WHO.length = 0; SCHOOL.length = 0; Object.keys(byId).forEach(k => delete byId[k]); Object.keys(PNAMES).forEach(k => delete PNAMES[k]);
+  list.forEach(x => { const m = Object.assign({}, x); byId[m.id] = m; if (!m.hidden) { MEMBERS.push(m); WHO.push(m); if (m.school) SCHOOL.push(m); }
+    const nm = [m.name].concat(m.role ? [m.role] : []).concat((m.aliases || '').split(',')).map(v => v.trim().toLowerCase()).filter(Boolean);
+    if (/^(papa|mama)$/.test((m.role || '').toLowerCase())) nm.push(m.role.toLowerCase() + 'i');
+    PNAMES[m.id] = Array.from(new Set(nm)); });
+  const fam = { id:'familie', name:'Alle' }; WHO.push(fam); byId.familie = fam;
+  try { document.documentElement.style.setProperty('--ncols', String(Math.max(1, MEMBERS.length))); } catch (e) {}
+  return true;
+}
+applyMembers(null);
+const mc = id => byId[id] && byId[id].color ? 'var(--pm-' + byId[id].color + ')' : 'var(--m-' + id + ')';
+const mt = id => byId[id] && byId[id].color ? 'var(--pt-' + byId[id].color + ')' : 'var(--t-' + id + ')';
+const ini = id => (byId[id] ? (byId[id].short || byId[id].name[0]) : '?');
+const parentId = () => (MEMBERS.find(m => !m.kid) || MEMBERS[0]).id;
+const firstKid = () => (MEMBERS.find(m => m.kid) || MEMBERS[0]).id;
 
 /* ---------- Datum ---------- */
 const pad = n => String(n).padStart(2,'0');
@@ -595,7 +620,6 @@ function backfillLog(){
 const NUMW = { ein:1, eins:1, eine:1, einen:1, zwei:2, drei:3, vier:4, fünf:5, sechs:6, sieben:7, acht:8, neun:9, zehn:10, elf:11, zwölf:12 };
 const MONS = ['januar','februar','märz','april','mai','juni','juli','august','september','oktober','november','dezember'];
 const WDS = ['sonntag','montag','dienstag','mittwoch','donnerstag','freitag','samstag'];
-const PNAMES = { klaus:['klaus','papa','papi'], helena:['helena','mama','mami'], dorothea:['dorothea','doro'], marlene:['marlene'], clemens:['clemens'] };
 function parseSpeech(text, now){
   now = now || new Date();
   let t = ' ' + String(text || '').toLowerCase().replace(/[,!?]/g, ' ').replace(/\s+/g, ' ') + ' ';
@@ -807,7 +831,7 @@ const IC = {
   cart:'M3 4h2l2.4 11h11L21 7H6.4M9 20h.01M18 20h.01',
   home:'M3 11l9-8 9 8M5 9.5V21h14V9.5M10 21v-6h4v6',
   sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
-  plus:'M12 5v14M5 12h14',
+  plus:'M12 5v14M5 12h14', up:'M6 15l6-6 6 6', down:'M6 9l6 6 6-6', users:'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.5a4 4 0 0 1 0 7.5M19 14a5 5 0 0 1 3 4.6V21',
   x:'M6 6l12 12M18 6L6 18',
   check:'M5 12.5l4.5 4.5L19 7.5',
   mic:'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M8 21h8',
@@ -1187,7 +1211,7 @@ function WhoPicker({ value, onChange, list = MEMBERS, label = 'Person' }){
   return html`<div class="row" role="group" aria-label=${label} style="gap:8px">
     ${list.map(m => html`<button type="button" class="avatar avatar-btn" aria-pressed=${value === m.id} aria-label=${m.name} title=${m.name}
       style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (value === m.id ? mc(m.id) : 'transparent')}
-      onClick=${() => onChange(m.id)}>${m.id === 'familie' ? 'A' : m.name[0]}</button>`)}
+      onClick=${() => onChange(m.id)}>${m.id === 'familie' ? 'A' : ini(m.id)}</button>`)}
   </div>`;
 }
 function Sheet({ title, onClose, children, wide }){
@@ -1356,8 +1380,27 @@ function PinPad({ mode, who, why, title, superOnly, onDone }){
 const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in window;
 function sayIt(text){ try { const u = new SpeechSynthesisUtterance(text); u.lang = 'de-DE'; u.rate = .9; const v = speechSynthesis.getVoices().find(x => /^de/i.test(x.lang)); if (v) u.voice = v; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} }
 /* Wer benutzt dieses Gerät? (wird überall vorausgewählt) */
-const getMe = () => { try { const v = localStorage.getItem('fb-me'); return v && byId[v] ? v : null; } catch (e) { return null; } };
-const setMe = id => { try { if (id) localStorage.setItem('fb-me', id); else localStorage.removeItem('fb-me'); } catch (e) {} };
+/* Geräte: jedes Gerät bekommt eine eigene Kennung; wem es gehört, steht in config/devices (zentral änderbar) */
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} };
+const devId = () => { let v = lsGet('fb-dev'); if (!v) { v = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); lsSet('fb-dev', v); } return v; };
+const devGuess = () => { const u = navigator.userAgent || '';
+  if (/Tizen|Family ?Hub|SMART-TV|SmartTV/i.test(u)) return 'Kühlschrank';
+  if (/iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1)) return 'iPad';
+  if (/iPhone/.test(u)) return 'iPhone';
+  if (/Android/.test(u)) return /Mobile/.test(u) ? 'Android-Handy' : 'Android-Tablet';
+  if (/Windows/.test(u)) return 'Windows-PC'; if (/Macintosh/.test(u)) return 'Mac'; return 'Gerät'; };
+const devsDoc = () => (mem_ && mem_.docs['config/devices']) || {};
+const myDev = () => devsDoc()[devId()];
+const getMe = () => { const d = myDev(); const v = d && 'who' in d ? d.who : lsGet('fb-me'); return v && byId[v] && MEMBERS.indexOf(byId[v]) >= 0 ? v : null; };
+function saveDev(patch){ if (DEMO) return; const id = devId(); const D = Object.assign({}, devsDoc()); const cur = D[id] || {};
+  D[id] = Object.assign({ label: lsGet('fb-devname') || devGuess() }, cur, patch, { seen: iso(new Date()) }); S.set('config/devices', D); }
+const setMe = id => { lsSet('fb-me', id || null); lsSet('fb-me-set', '1'); saveDev({ who: id || '' }); };
+/* Beim Start: Gerät melden (höchstens einmal am Tag) */
+function registerDevice(){ if (DEMO) return; const d = myDev(); const lsMe = lsGet('fb-me');
+  if (!d) { if (lsMe || lsGet('fb-me-set')) saveDev({ who: lsMe || '' }); return; }
+  if (d.seen !== iso(new Date())) saveDev({}); }
+const devAsked = () => !!(myDev() || lsGet('fb-me') || lsGet('fb-me-set'));
 const STAR_SVG = '<svg viewBox="0 0 24 24" width="44" height="44" fill="#F2A93B" stroke="#C9821A" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3l-5.5 2.9 1-6.2L3 9.6l6.2-.9z"/></svg>';
 function flyStars(from, whos, amount){
   try {
@@ -1623,7 +1666,7 @@ function Heute({ now }){
         const all = tot > 0 && n === tot;
         return html`<section class=${'col' + (drag && drag.over === m.id && drag.mid !== m.id ? ' dropover' : '')} data-mid=${m.id} aria-label=${m.name}>
           <div class="colhead">
-            <button type="button" class="avatar-tap" aria-label=${'Profil von ' + m.name + ' öffnen'} onClick=${() => setProf(m.id)}><span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${m.name[0]}</span></button>
+            <button type="button" class="avatar-tap" aria-label=${'Profil von ' + m.name + ' öffnen'} onClick=${() => setProf(m.id)}><span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${ini(m.id)}</span></button>
             <div style="min-width:0"><div class="colname" role="button" tabindex="0" onClick=${() => setProf(m.id)} style="cursor:pointer">${m.name}${pinsDoc()[m.id] && pinsDoc()[m.id].pin ? html`<span class="lockmini"><${Icon} n="lock" size=${14} /></span>` : null}</div>
               ${m.kid ? html`<div class="stars" data-star=${m.id}><${Star} />${fmtS((points && points[m.id]) || 0)} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}<span data-star=${m.id} style="align-items:center;gap:2px">${points && points[m.id] ? html` · <${Star} size=${14} />${fmtS(points[m.id])}` : null}</span></div>`}</div>
             <button type="button" class="addbtn" aria-label=${'Aufgabe für ' + m.name + ' hinzufügen'} title="Aufgabe hinzufügen" onClick=${() => setAddFor(m.id)}><${Icon} n="plus" size=${22} /></button>
@@ -1701,7 +1744,7 @@ function PersonTaskForm({ mid, mode0, r, onClose, init }){
         <div class="row" style="gap:8px">
           <button type="button" class="chip" aria-pressed=${allOn} onClick=${() => setWhos(allOn ? [mid] : MEMBERS.map(m => m.id))}>Alle</button>
           ${MEMBERS.map(m => { const on = whos.indexOf(m.id) >= 0; return html`<button type="button" class="avatar avatar-btn" aria-pressed=${on} aria-label=${m.name} title=${m.name}
-            style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (on ? mc(m.id) : 'transparent') + ';opacity:' + (on ? 1 : .45)} onClick=${() => flip(whos, setWhos, m.id)}>${m.name[0]}</button>`; })}
+            style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (on ? mc(m.id) : 'transparent') + ';opacity:' + (on ? 1 : .45)} onClick=${() => flip(whos, setWhos, m.id)}>${ini(m.id)}</button>`; })}
         </div></div>
       <div class="field">Symbol<div class="iconpick" role="group" aria-label="Symbol">${TASK_ICONS.map(k => html`<button type="button" aria-pressed=${icon === k} aria-label=${'Symbol ' + k} onClick=${() => setIcon(k)}><${Icon} n=${k} size=${20} /></button>`)}</div></div>
       <div class="field">Wie oft?
@@ -1773,7 +1816,7 @@ function Kalender({ now }){
         <div class="row" role="group" aria-label="Personen ein- und ausblenden" style="gap:6px">
           ${WHO.map(m => html`<button type="button" class="avatar avatar-btn cb-av" aria-pressed=${!hidden[m.id]} aria-label=${m.name + (hidden[m.id] ? ' einblenden' : ' ausblenden')} title=${m.name}
             style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + mc(m.id) + ';opacity:' + (hidden[m.id] ? .35 : 1)}
-            onClick=${() => setHidden(Object.assign({}, hidden, { [m.id]: !hidden[m.id] }))}>${m.id === 'familie' ? 'A' : m.name[0]}</button>`)}
+            onClick=${() => setHidden(Object.assign({}, hidden, { [m.id]: !hidden[m.id] }))}>${m.id === 'familie' ? 'A' : ini(m.id)}</button>`)}
         </div>
         <div class="seg" role="group" aria-label="Was anzeigen?">
           <button type="button" aria-pressed=${!onlyEv} onClick=${() => setOnly(false)}><${Icon} n="check" size=${18} /><span class="cb-long">Termine & Erledigtes</span><span class="cb-short">Alles</span></button>
@@ -1882,8 +1925,8 @@ function EventImport({ now, onClose }){
   const run = async () => {
     setBusy(true); setErr(''); setFound(null);
     const prompt = 'Heute ist ' + iso(now) + ' (' + WD[now.getDay()] + '). Das Bild ist ein Screenshot oder Foto mit Terminen (z. B. Elternbrief, Einladung, Vereinsplan, Kalender, Nachricht). ' +
-      'Familie: Klaus (Papa), Helena (Mama), Dorothea (9, Schule), Marlene (6, Schule), Clemens (4). Lies alle Termine aus. ' +
-      'Antworte nur mit JSON: {"events":[{"title":string,"date":"YYYY-MM-DD","time":"HH:MM" oder null,"end":"HH:MM" oder null,"who":"klaus"|"helena"|"dorothea"|"marlene"|"clemens"|"familie","exam":boolean,"fach":string oder null,"note":string oder null}]}. ' +
+      'Familie: ' + MEMBERS.map(m => m.name + (m.role || m.school ? ' (' + [m.role, m.school ? 'Schule' : ''].filter(Boolean).join(', ') + ')' : '')).join(', ') + '. Lies alle Termine aus. ' +
+      'Antworte nur mit JSON: {"events":[{"title":string,"date":"YYYY-MM-DD","time":"HH:MM" oder null,"end":"HH:MM" oder null,"who":' + MEMBERS.map(m => '"' + m.id + '"').join('|') + '|"familie","exam":boolean,"fach":string oder null,"note":string oder null}]}. ' +
       'Regeln: Fehlt das Jahr, nimm das nächste Datum ab heute. "who" nur setzen, wenn eindeutig eine Person gemeint ist, sonst "familie". exam=true nur bei Klassenarbeit/Probe/Test/Schulaufgabe eines Kindes, dann "fach" = Schulfach. Titel kurz auf Deutsch. Keine Termine erfinden; wenn keine da sind: {"events":[]}.';
     try {
       const res = await readImage(file, prompt);
@@ -1920,8 +1963,9 @@ function EventImport({ now, onClose }){
 const TONES = { deutsch:0, mathe:1, mathematik:1, englisch:2, französisch:2, sachunterricht:3, hsu:3, sport:4, kunst:5, musik:6, religion:7, ethik:7, werken:7 };
 const toneOf = f => { const k = (f || '').toLowerCase().trim(); if (k in TONES) return TONES[k]; let h = 0; for (const c of k) h = (h * 31 + c.charCodeAt(0)) % 997; return h % 8; };
 function Schule({ now }){
-  const [kid, setKid] = useState('dorothea');
-  const tt = useDoc('timetables/' + kid);
+  const [kid0, setKid] = useState(() => SCHOOL[0] ? SCHOOL[0].id : '');
+  const kid = SCHOOL.some(m => m.id === kid0) ? kid0 : (SCHOOL[0] ? SCHOOL[0].id : '');
+  const tt = useDoc('timetables/' + (kid || '_keins'));
   const exams = useCol('exams');
   const [sheet, setSheet] = useState(null);
   const mon = monday(now);
@@ -1930,6 +1974,7 @@ function Schule({ now }){
   const kidExams = (exams || []).filter(x => x.kid === kid);
   const subjects = tt ? Array.from(new Set([].concat.apply([], tt.days).filter(Boolean).filter(f => !/pause|frei/i.test(f)))) : [];
   const upcoming = (exams || []).filter(x => daysUntil(x.datum, now) >= 0).sort((a,b) => a.datum.localeCompare(b.datum));
+  if (!kid) return html`<div class="head"><div><h1>Stundenplan</h1></div></div><div class="card"><div class="empty"><strong>Niemand geht zur Schule</strong>In „Familie verwalten“ (Seite Sterne) bei einem Kind „Geht zur Schule“ einschalten.</div></div>`;
   const blank = () => S.set('timetables/' + kid, { times:['8:00','8:45','9:50','10:35','11:30','12:15'], days:[0,1,2,3,4].map(() => [null,null,null,null,null,null]), updatedAt: Date.now() });
   return html`
     <div class="head schoolhead">
@@ -2129,7 +2174,7 @@ function TimetableImport({ kid, onClose }){
 const QUICK = ['Milch','Brot','Eier','Butter','Bananen','Äpfel','Joghurt','Nudeln','Käse','Klopapier'];
 function Einkauf(){
   const items = useCol('shopping');
-  const [who, setWho] = useState(() => getMe() || 'helena');
+  const [who, setWho] = useState(() => getMe() || parentId());
   const [text, setText] = useState('');
   const [heard, setHeard] = useState('');
   const inputRef = useRef(null);
@@ -2189,7 +2234,7 @@ function Essen({ now }){
   const [off, setOff] = useState(0);
   const plan = useCol('mealplan');
   const wishes = useCol('wishes');
-  const [who, setWho] = useState(() => { const me = getMe(); return me || 'clemens'; });
+  const [who, setWho] = useState(() => getMe() || MEMBERS[MEMBERS.length - 1].id);
   const [wmeal, setWmeal] = useState('');
   const [text, setText] = useState('');
   const [heard, setHeard] = useState('');
@@ -2351,7 +2396,8 @@ function Sterne({ now }){
   const claims = useDoc('rewards/claims');
   const custom = useDoc('config/rewards');
   const [mode, setMode] = useState('woche');
-  const [sel, setSel] = useState('dorothea');
+  const [sel0, setSel] = useState(firstKid); const sel = byId[sel0] && MEMBERS.indexOf(byId[sel0]) >= 0 ? sel0 : firstKid();
+  const [adm, setAdm] = useState(false);
   const [edit, setEdit] = useState(false);
   const [open, setOpen] = useState(null);
   useEffect(() => { dbReady.then(() => { try { quietly(backfillLog); } catch (e) { console.error(e); } }); }, []);
@@ -2367,7 +2413,7 @@ function Sterne({ now }){
   /* Belohnungen ändern/einlösen nur mit Super-PIN von Mama oder Papa */
   const parentOk = async why => { if (DEMO) return true; const P = pinsDoc();
     if (!MEMBERS.some(m => !m.kid && P[m.id] && P[m.id].sup)) { toast('Bitte zuerst bei Mama oder Papa eine Super-PIN festlegen (auf „Heute“ den Namen antippen).'); return false; }
-    return needPin('helena', why + ' – Super-PIN von Mama oder Papa', true); };
+    return needPin(parentId(), why + ' – Super-PIN von Mama oder Papa', true); };
   const claim = async (who, at) => { if (!(await parentOk('Belohnung einlösen'))) return; const c = Object.assign({}, C); c[who] = Object.assign({}, c[who] || {}, { [at]: iso(now) }); S.set('rewards/claims', c); toast('Belohnung eingelöst – viel Spaß!'); };
   const unclaim = async (who, at) => { if (!(await parentOk('Einlösen rückgängig machen'))) return; const c = Object.assign({}, C); c[who] = Object.assign({}, c[who] || {}); delete c[who][at]; S.set('rewards/claims', c); };
   const sp = P[sel] || 0; const si = levelIdx(sp);
@@ -2422,6 +2468,10 @@ function Sterne({ now }){
         </div>
       </aside>
     </div>
+    <div class="card"><div class="row" style="justify-content:space-between;gap:10px"><div style="min-width:0"><h2 style="font-size:20px;display:flex;align-items:center;gap:8px"><${Icon} n="users" size=${22} />Familie & Geräte</h2>
+      <div class="sub" style="font-size:14px">Personen anlegen und ändern (Name, Kürzel, Farbe, Schule), PINs und welches Gerät wem gehört.</div></div>
+      <button type="button" class="btn" onClick=${() => openAdmin(() => setAdm(true))}><${Icon} n="lock" size=${18} />Familie verwalten</button></div></div>
+    ${adm ? html`<${Admin} onClose=${() => setAdm(false)} />` : null}
     ${DEMO ? null : html`<${BackupCard} />`}
     ${edit ? html`<${RewardEdit} R=${R} rw=${rw} fr=${fr} onClose=${() => setEdit(false)} />` : null}`;
 }
@@ -2469,7 +2519,7 @@ function BackupCard(){
   const [sel, setSel] = useState(null);
   const dl = key => { try { const b = mem.docs[key]; const blob = new Blob([JSON.stringify(b, null, 1)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'familienboard-' + key.slice(7) + '.json'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { toast('Herunterladen ging nicht'); } };
-  const restore = async key => { if (!(await needPin('helena', 'Sicherung wiederherstellen – Super-PIN von Mama oder Papa', true))) return;
+  const restore = async key => { if (!(await needPin(parentId(), 'Sicherung wiederherstellen – Super-PIN von Mama oder Papa', true))) return;
     if (await restoreBackup(key)) { toast('Stand vom ' + fromIso(key.slice(7)).toLocaleDateString('de-DE') + ' wiederhergestellt'); setSel(null); } };
   return html`<div class="card">
     <h2 style="font-size:20px;display:flex;align-items:center;gap:8px"><${Icon} n="undo" size=${20} />Datensicherung</h2>
@@ -2501,6 +2551,125 @@ const VIEWS = [
   { id:'essen', label:'Essen', icon:'fork' },
   { id:'sterne', label:'Sterne', icon:'trophy' }
 ];
+/* ---------- FAMILIE VERWALTEN (Admin) ---------- */
+const EMOJI_SHORT = ['🐻','🦊','🐱','🐶','🦁','🐸','🐼','🦄','🐝','⭐','🚜','🌻'];
+const ROLE_SUG = ['Papa','Mama','Oma','Opa','Tante','Onkel','Babysitter'];
+const slugId = (name, list) => { let b = (name || 'person').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,'').slice(0, 16) || 'person';
+  if (b === 'familie') b = 'person'; let id = b, i = 2; while (list.some(m => m.id === id)) id = b + (i++); return id; };
+const memberList = () => { const d = mem_ && mem_.docs['config/members']; return d && Array.isArray(d.list) && d.list.some(m => !m.hidden) ? d.list : DEFAULT_MEMBERS; };
+const saveMembers = l => S.set('config/members', { list: l.map(m => { const o = Object.assign({}, m); Object.keys(o).forEach(k => { if (o[k] === undefined) delete o[k]; }); return o; }), updatedAt: Date.now() });
+const shortOf = m => m.short || (m.name || '?')[0];
+const shortSug = name => { const n = (name || '').trim(); if (!n) return EMOJI_SHORT.slice(0, 6);
+  const A = n[0].toUpperCase(); const parts = n.split(/\s+/);
+  const s = [A, A + (n[1] || '').toLowerCase(), parts.length > 1 ? A + parts[1][0].toUpperCase() : A + (n[n.length - 1] || '').toLowerCase()];
+  return Array.from(new Set(s.filter(x => x && x.trim()))).concat(EMOJI_SHORT); };
+async function openAdmin(open){
+  const P = pinsDoc(); const hasSup = MEMBERS.some(m => !m.kid && P[m.id] && P[m.id].sup);
+  if (hasSup && !(await needPin(parentId(), 'Familie verwalten – Super-PIN von Mama oder Papa', true))) return;
+  open();
+}
+function Swatch({ k, on, taken, onClick }){
+  const lbl = (PALETTE.find(p => p[0] === k) || [k, k])[1] + (taken ? ' (schon vergeben)' : '');
+  return html`<button type="button" class="swatch" aria-pressed=${on} aria-label=${lbl} title=${lbl} disabled=${taken} onClick=${onClick}
+    style=${'background:var(--pt-' + k + ');border-color:' + (on ? 'var(--pm-' + k + ')' : 'transparent')}><span style=${'background:var(--pm-' + k + ')'}></span></button>`;
+}
+function MemberForm({ m, list, onDone }){
+  const isNew = !m;
+  const others = list.filter(x => !x.hidden && (!m || x.id !== m.id));
+  const freeColor = (PALETTE.find(p => !others.some(o => o.color === p[0])) || PALETTE[0])[0];
+  const [f, setF] = useState(Object.assign({ name:'', role:'', kid:true, school:false, speak:false, short:'', color:freeColor, aliases:'' }, m || {}));
+  const [conf, setConf] = useState(false);
+  const up = (k, v) => setF(o => Object.assign({}, o, { [k]: v }));
+  const takenShort = v => others.some(o => shortOf(o) === v);
+  const short = f.short || (f.name.trim() ? f.name.trim()[0].toUpperCase() : '');
+  const save = e => { e && e.preventDefault(); const name = f.name.trim(); if (!name) { toast('Bitte einen Namen eingeben'); return; }
+    if (others.some(o => o.name.toLowerCase() === name.toLowerCase())) { toast('Diesen Namen gibt es schon'); return; }
+    const o = Object.assign({}, f, { name, short, role: (f.role || '').trim(), aliases: (f.aliases || '').trim() });
+    if (!o.kid) { o.school = false; o.speak = false; }
+    if (!list.filter(x => !x.hidden && (!m || x.id !== m.id)).concat([o]).some(x => !x.kid)) { toast('Mindestens eine Person muss erwachsen sein'); return; }
+    let l;
+    if (isNew) { o.id = slugId(name, list); l = list.concat([o]); } else l = list.map(x => x.id === m.id ? Object.assign({}, x, o) : x);
+    saveMembers(l); toast(isNew ? name + ' gehört jetzt zur Familie' : 'Gespeichert'); onDone(); };
+  const archive = () => { const rest = list.filter(x => !x.hidden && x.id !== m.id);
+    if (!rest.length) { toast('Die letzte Person kann nicht entfernt werden'); return; }
+    if (!rest.some(x => !x.kid)) { toast('Mindestens eine erwachsene Person muss bleiben'); return; }
+    saveMembers(list.map(x => x.id === m.id ? Object.assign({}, x, { hidden: true }) : x)); toast(m.name + ' wurde entfernt'); onDone(); };
+  return html`<${Sheet} title=${isNew ? 'Neue Person' : m.name + ' bearbeiten'} onClose=${onDone}>
+    <form style="display:flex;flex-direction:column;gap:14px" onSubmit=${save}>
+      <div class="row" style="gap:14px"><span class="avatar" style=${'width:64px;height:64px;font-size:27px;background:var(--pt-' + f.color + ');color:var(--pm-' + f.color + ');border:3px solid var(--pm-' + f.color + ')'}>${short || '?'}</span>
+        <div style="min-width:0"><b style="font-size:19px">${f.name.trim() || 'Name'}</b><div class="sub" style="font-size:14px">${f.kid ? 'Kind' + (f.school ? ' · geht zur Schule' : '') : (f.role || 'Erwachsen')}</div></div></div>
+      <label class="field">Name<input id="mf-name" value=${f.name} onInput=${e => up('name', e.target.value)} placeholder="z. B. Oma Rita" autocomplete="off" /></label>
+      <div class="field">Kind oder erwachsen?<div class="seg" role="group" aria-label="Kind oder erwachsen">
+        <button type="button" aria-pressed=${f.kid} onClick=${() => up('kid', true)}>Kind</button>
+        <button type="button" aria-pressed=${!f.kid} onClick=${() => up('kid', false)}>Erwachsen</button></div>
+        <span class="sub" style="font-size:13px">${f.kid ? 'Kinder sammeln Sterne für Belohnungen.' : 'Erwachsene können eine Super-PIN haben und damit Belohnungen und die Familie verwalten.'}</span></div>
+      ${f.kid ? html`<label class="check"><input type="checkbox" checked=${!!f.school} onChange=${e => up('school', e.target.checked)} /><span><b>Geht zur Schule</b><span class="sub" style="display:block;font-size:13px">Dann gibt es Stundenplan, Klassenarbeiten und Bus-Ampel.</span></span></label>
+        <label class="check"><input type="checkbox" checked=${!!f.speak} onChange=${e => up('speak', e.target.checked)} /><span><b>Vorlese-Knopf</b><span class="sub" style="display:block;font-size:13px">Für Kinder, die noch nicht lesen: Aufgaben werden vorgelesen.</span></span></label>`
+      : html`<div class="field">Bezeichnung (optional)<div class="row" style="gap:6px">${ROLE_SUG.map(r => html`<button type="button" class="chip" aria-pressed=${f.role === r} onClick=${() => up('role', f.role === r ? '' : r)}>${r}</button>`)}</div>
+        <input id="mf-role" value=${f.role} onInput=${e => up('role', e.target.value)} placeholder="oder selbst eintippen" /></div>`}
+      <div class="field">Kürzel<div class="row" style="gap:8px">${shortSug(f.name).map(v => { const t = takenShort(v); return html`<button type="button" class="avatar avatar-btn" disabled=${t} aria-pressed=${short === v} aria-label=${'Kürzel ' + v + (t ? ' (schon vergeben)' : '')} title=${t ? 'schon vergeben' : v}
+          style=${'background:var(--pt-' + f.color + ');color:var(--pm-' + f.color + ');border-color:' + (short === v ? 'var(--pm-' + f.color + ')' : 'transparent') + (t ? ';opacity:.3' : '')} onClick=${() => up('short', v)}>${v}</button>`; })}</div>
+        ${takenShort(short) ? html`<span class="sub" style="font-size:13px;color:var(--warn-ink)">Dieses Kürzel hat schon jemand – besser ein anderes wählen.</span>` : null}</div>
+      <div class="field">Farbe<div class="row" style="gap:8px">${PALETTE.map(p => html`<${Swatch} k=${p[0]} on=${f.color === p[0]} taken=${others.some(o => o.color === p[0])} onClick=${() => up('color', p[0])} />`)}</div></div>
+      <label class="field">Wird auch so genannt (für die Spracheingabe, mit Komma trennen)<input id="mf-alias" value=${f.aliases || ''} onInput=${e => up('aliases', e.target.value)} placeholder="z. B. Omi, Rita" /></label>
+      <button class="btn" type="submit">${isNew ? 'Person anlegen' : 'Speichern'}</button>
+      ${isNew ? null : conf ? html`<div class="hint warn"><b>${m.name} wirklich entfernen?</b> Sterne, Termine und Aufgaben bleiben gespeichert. Man kann ${m.name} später wiederherstellen.
+          <div class="row" style="margin-top:8px"><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${archive}><${Icon} n="bin" size=${16} />Entfernen</button>
+          <button type="button" class="btn small ghost" onClick=${() => setConf(false)}>Abbrechen</button></div></div>`
+        : html`<button type="button" class="btn ghost" style="color:var(--danger)" onClick=${() => setConf(true)}><${Icon} n="bin" size=${18} />Aus der Familie entfernen</button>`}
+    </form>
+  <//>`;
+}
+function Admin({ onClose }){
+  useDoc('config/members'); const pins = useDoc('config/pins') || {}; const devs = useDoc('config/devices') || {};
+  const [ed, setEd] = useState(null); const [prof, setProf] = useState(null); const [dn, setDn] = useState(lsGet('fb-devname') || '');
+  const list = memberList(); const act = list.filter(m => !m.hidden), gone = list.filter(m => m.hidden);
+  const noSup = !act.some(m => !m.kid && pins[m.id] && pins[m.id].sup);
+  if (ed) return html`<${MemberForm} m=${ed === 'new' ? null : ed} list=${list} onDone=${() => setEd(null)} />`;
+  if (prof) return html`<${Profile} id=${prof} onClose=${() => setProf(null)} />`;
+  const move = (id, d) => { const l = list.slice(); const i = l.findIndex(m => m.id === id); let j = i + d; while (j >= 0 && j < l.length && l[j].hidden) j += d; if (j < 0 || j >= l.length) return; const t = l[i]; l[i] = l[j]; l[j] = t; saveMembers(l); };
+  const restore = id => { saveMembers(list.map(x => x.id === id ? Object.assign({}, x, { hidden: false }) : x)); toast((byId[id] || {}).name + ' ist wieder da'); };
+  const me = devId(); const D = Object.keys(devs).map(k => Object.assign({ k }, devs[k])).sort((a, b) => (a.k === me ? -1 : b.k === me ? 1 : (b.seen || '').localeCompare(a.seen || '')));
+  const setDevWho = (k, who) => { const o = Object.assign({}, devs); o[k] = Object.assign({}, o[k], { who }); if (k === me) lsSet('fb-me', who || null); S.set('config/devices', o); toast('Zuordnung geändert'); };
+  const delDev = k => { const o = Object.assign({}, devs); delete o[k]; S.set('config/devices', o); };
+  const renameMine = () => { lsSet('fb-devname', dn.trim() || null); saveDev({ label: dn.trim() || devGuess() }); toast('Gerätename gespeichert'); };
+  const pinTxt = id => { const x = pins[id] || {}; return [x.pin ? 'PIN' : '', x.sup ? 'Super-PIN' : ''].filter(Boolean).join(' + ') || 'keine PIN'; };
+  return html`<${Sheet} title="Familie verwalten" onClose=${onClose} wide>
+    ${noSup ? html`<div class="hint warn" role="status">Noch hat kein Erwachsener eine Super-PIN – dann kann jeder hier etwas ändern. Tippe bei einem Erwachsenen auf „PIN“, um eine Super-PIN festzulegen.</div>` : null}
+    <div class="field">Familie<div class="list">
+      ${act.map((m, i) => html`<div class="li adm">
+        <span class="avatar" style=${'width:44px;height:44px;font-size:19px;background:' + mt(m.id) + ';color:' + mc(m.id)}>${shortOf(m)}</span>
+        <div class="tx"><b>${m.name}</b><span>${m.kid ? 'Kind' + (m.school ? ' · Schule' : '') + (m.speak ? ' · Vorlesen' : '') : (m.role || 'Erwachsen')} · ${pinTxt(m.id)}</span></div>
+        <div class="row" style="gap:4px;flex-wrap:nowrap">
+          <button type="button" class="iconbtn" aria-label=${m.name + ' nach oben'} disabled=${i === 0} onClick=${() => move(m.id, -1)}><${Icon} n="up" size=${18} /></button>
+          <button type="button" class="iconbtn" aria-label=${m.name + ' nach unten'} disabled=${i === act.length - 1} onClick=${() => move(m.id, 1)}><${Icon} n="down" size=${18} /></button>
+          <button type="button" class="btn small ghost" onClick=${() => setProf(m.id)}><${Icon} n="lock" size=${16} />PIN</button>
+          <button type="button" class="btn small" onClick=${() => setEd(m)}><${Icon} n="edit" size=${16} />Ändern</button></div></div>`)}
+    </div><button type="button" class="btn ghost" onClick=${() => setEd('new')}><${Icon} n="plus" size=${18} />Person hinzufügen</button></div>
+    ${gone.length ? html`<div class="field">Entfernte Personen<div class="list">${gone.map(m => html`<div class="li"><${Avatar} id=${m.id} size=${36} /><div class="tx"><b>${m.name}</b><span>Daten sind noch gespeichert</span></div>
+      <button type="button" class="btn small ghost" onClick=${() => restore(m.id)}>Wiederherstellen</button></div>`)}</div></div>` : null}
+    <div class="field">Geräte<span class="sub" style="font-size:13px">Wem ein Gerät gehört, der ist dort z. B. im Einkaufszettel und in der Wunschbox schon ausgewählt. „Gemeinsam“ passt für den Kühlschrank.</span>
+      <div class="list">${D.length ? D.map(d => html`<div class="li adm dev">
+        <div class="tx"><b>${d.k === me ? (d.label || 'Dieses Gerät') + ' (dieses Gerät)' : d.label || 'Gerät'}</b><span>zuletzt ${d.seen ? fromIso(d.seen).toLocaleDateString('de-DE') : '–'}</span></div>
+        <div class="row" style="gap:6px">
+          <button type="button" class="chip" aria-pressed=${!d.who} onClick=${() => setDevWho(d.k, '')}>Gemeinsam</button>
+          ${act.map(m => html`<button type="button" class="avatar avatar-btn" style=${'width:40px;height:40px;font-size:16px;background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (d.who === m.id ? mc(m.id) : 'transparent')} aria-pressed=${d.who === m.id} aria-label=${'Gehört ' + m.name} title=${m.name} onClick=${() => setDevWho(d.k, m.id)}>${shortOf(m)}</button>`)}
+          ${d.k === me ? null : html`<button type="button" class="iconbtn" aria-label="Gerät aus der Liste löschen" onClick=${() => delDev(d.k)}><${Icon} n="bin" size=${18} /></button>`}</div></div>`)
+        : html`<div class="sub">Noch keine Geräte gemeldet.</div>`}</div>
+      <div class="row" style="align-items:flex-end"><label class="field" style="flex:1 1 200px">Name für dieses Gerät<input id="dev-name" value=${dn} onInput=${e => setDn(e.target.value)} placeholder=${devGuess()} /></label>
+        <button type="button" class="btn small" onClick=${renameMine}>Speichern</button></div></div>
+  <//>`;
+}
+function DeviceSetup({ onDone }){
+  return html`<div class="overlay"><div class="sheet" role="dialog" aria-modal="true" aria-label="Wer bist du?">
+    <div class="sh"><h2>Wer benutzt dieses Gerät?</h2></div>
+    <div class="sub" style="font-size:15px">Dann bist du hier z. B. im Einkaufszettel und in der Wunschbox schon ausgewählt. Ändern kann man das jederzeit im eigenen Profil.</div>
+    <div class="whopick">${MEMBERS.map(m => html`<button type="button" class="whocard" onClick=${() => { setMe(m.id); toast('Hallo ' + m.name + '!'); onDone(); }}>
+      <${Avatar} id=${m.id} size=${64} /><b>${m.name}</b></button>`)}</div>
+    <button type="button" class="btn ghost" onClick=${() => { setMe(null); toast('Gemeinsames Gerät'); onDone(); }}><${Icon} n="home" size=${20} />Gemeinsames Gerät (z. B. Kühlschrank)</button>
+    <button type="button" class="btn ghost" style="border:0" onClick=${onDone}>Später</button>
+  </div></div>`;
+}
 function App(){
   const fromHash = () => { const h = (location.hash || '').slice(1); return VIEWS.some(v => v.id === h) || h === 'check' ? h : 'heute'; };
   const [view, setView] = useState(fromHash());
@@ -2509,6 +2678,9 @@ function App(){
   const [ready, setReady] = useState(false);
   const [loadErr, setLoadErr] = useState('');
   const now = useNow();
+  const mdoc = useDoc('config/members'); applyMembers(mdoc);
+  const [setup, setSetup] = useState(false);
+  useEffect(() => { if (!ready || DEMO) return; try { registerDevice(); } catch (e) { console.error(e); } if (!devAsked()) setSetup(true); }, [ready]);
   useEffect(() => { const h = () => setView(fromHash()); window.addEventListener('hashchange', h); return () => window.removeEventListener('hashchange', h); }, []);
   useEffect(() => { let t; const h = e => { setMsg(e.detail); clearTimeout(t); t = setTimeout(() => setMsg(''), 3200); }; window.addEventListener('fb-toast', h); return () => window.removeEventListener('fb-toast', h); }, []);
   useEffect(() => { if (!sb) return; sb.auth.getSession().then(r => setAuth(r.data && r.data.session ? 'in' : 'out')); }, []);
@@ -2533,6 +2705,7 @@ function App(){
       ${loadErr ? html`<div class="hint warn" role="alert">${loadErr}</div>` : null}
       <${V} now=${now} />
     </main>
+    ${setup ? html`<${DeviceSetup} onDone=${() => setSetup(false)} />` : null}
     ${msg ? html`<div class="toast" role="status">${msg}</div>` : null}
   </div>`;
 }
