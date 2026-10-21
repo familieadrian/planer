@@ -349,7 +349,7 @@ let mem_ = null;
 function givePoints(points, deltas){
   const p = Object.assign({}, points || {}); const wk = weekDoc(); const w = Object.assign({}, (mem_ && mem_.docs[wk]) || {});
   Object.keys(deltas).forEach(id => { const d = deltas[id]; if (!d) return; const before = p[id] || 0;
-    p[id] = Math.max(0, before + d); w[id] = Math.max(0, (w[id] || 0) + d);
+    p[id] = r2(Math.max(0, before + d)); w[id] = r2(Math.max(0, (w[id] || 0) + d));
     const a = levelIdx(before), b = levelIdx(p[id]);
     if (b > a) setTimeout(() => toast('Level ' + (b + 1) + ' erreicht: ' + byId[id].name + ' ist jetzt ' + LEVELS[b].name + '!'), 600); });
   S.set('points/all', p); S.set(wk, w);
@@ -359,6 +359,10 @@ function givePoints(points, deltas){
 const REPEATS = [['none','Einmalig'],['weekly','Jede Woche'],['daily','Jeden Tag']];
 const isRep = t => t.repeat === 'weekly' || t.repeat === 'daily';
 const todoKey = (t, ds) => isRep(t) ? ds : 'once';
+const whoOf = (t, ds) => { const w = (t.done || {})[todoKey(t, ds)]; return !w ? [] : Array.isArray(w) ? w : [w]; };
+const r2 = n => Math.round(n * 100) / 100;
+const fmtS = n => { const v = Math.round((n || 0) * 10) / 10; return String(v).replace('.', ','); };
+const names = ids => ids.map(i => byId[i] ? byId[i].name : '?').join(' & ');
 function todoOn(t, ds, today){
   if (t.repeat === 'daily') return !t.date || ds >= t.date;
   if (t.repeat === 'weekly') return !!t.date && ds >= t.date && fromIso(t.date).getDay() === fromIso(ds).getDay();
@@ -367,11 +371,13 @@ function todoOn(t, ds, today){
 }
 function claimTodo(t, ds, who, points){
   if (points === undefined) { toast('Einen Moment, Sterne werden noch geladen …'); return; }
-  const k = todoKey(t, ds); const done = Object.assign({}, t.done || {}); const prev = done[k]; const st = t.stars || 1; const dl = {};
-  if (prev) { dl[prev] = -st; delete done[k]; }
-  if (who) { done[k] = who; dl[who] = (dl[who] || 0) + st; }
+  const k = todoKey(t, ds); const done = Object.assign({}, t.done || {}); const prev = whoOf(t, ds); const st = t.stars || 1; const dl = {};
+  const list = !who ? [] : Array.isArray(who) ? who : [who];
+  prev.forEach(id => { dl[id] = r2((dl[id] || 0) - st / prev.length); });
+  list.forEach(id => { dl[id] = r2((dl[id] || 0) + st / list.length); });
+  if (list.length) done[k] = list.length === 1 ? list[0] : list; else delete done[k];
   const body = Object.assign({}, t, { done }); delete body.id;
-  if (k === 'once') body.doneOn = who ? ds : null;
+  if (k === 'once') body.doneOn = list.length ? ds : null;
   S.set('todos/' + t.id, body); givePoints(points, dl);
 }
 const MON = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
@@ -814,16 +820,16 @@ function TypePreview(){
 function Todos({ today }){
   const todos = useCol('todos') || [];
   const [sel, setSel] = useState(null); const [add, setAdd] = useState(false);
-  const list = todos.filter(t => todoOn(t, today, today)).sort((a, b) => (!!(a.done || {})[todoKey(a, today)] - !!(b.done || {})[todoKey(b, today)]) || (a.title || '').localeCompare(b.title || ''));
+  const list = todos.filter(t => todoOn(t, today, today)).sort((a, b) => (whoOf(a, today).length > 0) - (whoOf(b, today).length > 0) || (a.title || '').localeCompare(b.title || ''));
   return html`<section class="card" aria-label="Aufgaben für alle" style="padding:14px 18px">
     <div class="row" style="justify-content:space-between"><h2 style="font-size:19px">Aufgaben für alle <span class="sub" style="font-size:14px">· wer’s macht, bekommt die Sterne</span></h2>
       <button type="button" class="btn small ghost" onClick=${() => setAdd(true)}><${Icon} n="plus" size=${18} />Aufgabe</button></div>
-    ${list.length ? html`<div class="todolist">${list.map(t => { const who = (t.done || {})[todoKey(t, today)];
+    ${list.length ? html`<div class="todolist">${list.map(t => { const ws = whoOf(t, today); const who = ws[0];
       return html`<button type="button" class=${'todo' + (who ? ' done' : '')} onClick=${() => setSel(t)} style=${who ? 'background:' + mt(who) + ';border-color:' + mc(who) : ''}
-        aria-label=${t.title + (who ? ', erledigt von ' + byId[who].name : ', offen')}>
-        ${who ? html`<${Avatar} id=${who} size=${36} />` : html`<span class="tb"></span>`}
+        aria-label=${t.title + (who ? ', erledigt von ' + names(ws) : ', offen')}>
+        ${who ? html`<span style="display:flex">${ws.map((w, i) => html`<span style=${i ? 'margin-left:-12px' : ''}><${Avatar} id=${w} size=${36} ring=${true} /></span>`)}</span>` : html`<span class="tb"></span>`}
         <span style="display:flex;flex-direction:column;gap:2px"><span>${t.title}</span>
-          <span class="ts">${who ? 'erledigt von ' + byId[who].name : Array.from({ length: t.stars || 1 }, () => html`<${Star} size=${14} />`)}${t.repeat === 'weekly' ? ' · jede Woche' : t.repeat === 'daily' ? ' · jeden Tag' : ''}</span></span>
+          <span class="ts">${who ? 'erledigt von ' + names(ws) : Array.from({ length: t.stars || 1 }, () => html`<${Star} size=${14} />`)}${t.repeat === 'weekly' ? ' · jede Woche' : t.repeat === 'daily' ? ' · jeden Tag' : ''}</span></span>
       </button>`; })}</div>` : html`<div class="sub" style="font-size:14px">Gerade nichts offen.</div>`}
   </section>
   ${sel ? html`<${TodoClaim} t=${sel} ds=${today} onClose=${() => setSel(null)} />` : null}
@@ -832,14 +838,21 @@ function Todos({ today }){
 function TodoClaim({ t, ds, onClose }){
   const points = useDoc('points/all');
   const [confirm, setConfirm] = useState(false);
-  const who = (t.done || {})[todoKey(t, ds)];
+  const prev = whoOf(t, ds);
+  const [pick, setPick] = useState(prev);
   const st = t.stars || 1;
-  const claim = id => { if (id === who) { onClose(); return; } claimTodo(t, ds, id, points); if (points !== undefined) { toast('Super, ' + byId[id].name + '! +' + st + (st === 1 ? ' Stern' : ' Sterne')); onClose(); } };
+  const each = pick.length ? st / pick.length : st;
+  const flip = id => setPick(pick.indexOf(id) >= 0 ? pick.filter(x => x !== id) : pick.concat([id]));
+  const same = pick.length === prev.length && pick.every(x => prev.indexOf(x) >= 0);
+  const save = () => { if (same) { onClose(); return; } if (points === undefined) { toast('Einen Moment, Sterne werden noch geladen …'); return; }
+    claimTodo(t, ds, pick, points);
+    toast(pick.length ? 'Super, ' + names(pick) + '! ' + (pick.length > 1 ? 'Je +' : '+') + fmtS(each) + (each === 1 ? ' Stern' : ' Sterne') : 'Wieder offen'); onClose(); };
   return html`<${Sheet} title=${t.title} onClose=${onClose}>
-    <div class="sub" style="font-size:16px">${who ? 'Erledigt von ' + byId[who].name + '. Falsch? Einfach die richtige Person antippen.' : 'Wer hat es gemacht? Antippen und Sterne bekommen.'} (${st} ${st === 1 ? 'Stern' : 'Sterne'})</div>
-    <div class="claim">${MEMBERS.map(m => html`<button type="button" class="claimbtn" aria-pressed=${who === m.id} onClick=${() => claim(m.id)} style=${who === m.id ? 'background:' + mt(m.id) : ''}>
-      <${Avatar} id=${m.id} size=${64} /><b>${m.name}</b></button>`)}</div>
-    ${who ? html`<button type="button" class="btn ghost" onClick=${() => { claimTodo(t, ds, null, points); onClose(); }}>Doch nicht erledigt</button>` : null}
+    <div class="sub" style="font-size:16px">Wer hat mitgemacht? Alle antippen, die geholfen haben. ${st === 1 ? 'Der 1 Stern wird' : 'Die ' + st + ' Sterne werden'} gerecht aufgeteilt.</div>
+    <div class="claim">${MEMBERS.map(m => { const on = pick.indexOf(m.id) >= 0;
+      return html`<button type="button" class="claimbtn" aria-pressed=${on} onClick=${() => flip(m.id)} style=${on ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : ''}>
+        <${Avatar} id=${m.id} size=${64} /><b>${m.name}</b>${on ? html`<span class="ts" style="display:flex;align-items:center;gap:3px;font-weight:800"><${Star} size=${14} />+${fmtS(each)}</span>` : null}</button>`; })}</div>
+    <button type="button" class="btn" onClick=${save} disabled=${!pick.length && !prev.length}>${pick.length ? 'Erledigt von ' + names(pick) + (pick.length > 1 ? ' · je ' + fmtS(each) + ' Sterne' : '') : prev.length ? 'Doch nicht erledigt' : 'Bitte Person antippen'}</button>
     ${confirm ? html`<div class="row"><span style="font-weight:800">Aufgabe ganz löschen?</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => { S.del('todos/' + t.id); onClose(); }}>Löschen</button><button type="button" class="btn small ghost" onClick=${() => setConfirm(false)}>Nein</button></div>`
       : html`<button type="button" class="btn ghost" onClick=${() => setConfirm(true)}>Aufgabe löschen</button>`}
   <//>`;
@@ -922,7 +935,7 @@ function Heute({ now }){
           <div class="colhead">
             <span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${m.name[0]}</span>
             <div style="min-width:0"><div class="colname">${m.name}</div>
-              ${m.kid ? html`<div class="stars"><${Star} />${(points && points[m.id]) || 0} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}${points && points[m.id] ? html` · <${Star} size=${14} />${points[m.id]}` : null}</div>`}</div>
+              ${m.kid ? html`<div class="stars"><${Star} />${fmtS((points && points[m.id]) || 0)} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}${points && points[m.id] ? html` · <${Star} size=${14} />${fmtS(points[m.id])}` : null}</div>`}</div>
           </div>
           ${list.map((t, i) => { const d = !!(checks && checks[m.id + '-' + mode + '-' + i]);
             return html`<div style="display:flex;gap:6px;align-items:center">
@@ -993,8 +1006,8 @@ function Kalender({ now }){
           ${busesOn(d).filter(b => !hidden[b.kid]).map(b => html`<button type="button" class="ev busev" style=${'background:' + mt(b.kid)} onClick=${() => { location.hash = 'schule'; }}>
             <span class="t"><span class="dot" style=${'background:' + mc(b.kid)}></span>${b.dep}${b.arr ? '–' + b.arr : ''}</span>
             <span class="x">Bus · ${byId[b.kid].name}</span></button>`)}
-          ${todos.filter(t => todoOn(t, ds, today)).map(t => { const w = (t.done || {})[todoKey(t, ds)]; return html`<button type="button" class="ev todoev" style=${w ? 'background:' + mt(w) : ''} onClick=${() => setSheet({ kind:'todo', t, ds })}>
-            <span class="t">${w ? html`<span class="dot" style=${'background:' + mc(w)}></span>erledigt · ${byId[w].name}` : 'Aufgabe für alle'}</span><span class="x">${t.title}</span></button>`; })}
+          ${todos.filter(t => todoOn(t, ds, today)).map(t => { const ws = whoOf(t, ds); const w = ws[0]; return html`<button type="button" class="ev todoev" style=${w ? 'background:' + mt(w) : ''} onClick=${() => setSheet({ kind:'todo', t, ds })}>
+            <span class="t">${w ? html`<span class="dot" style=${'background:' + mc(w)}></span>erledigt · ${names(ws)}` : 'Aufgabe für alle'}</span><span class="x">${t.title}</span></button>`; })}
           ${ex.map(x => html`<button type="button" class="ev exam" onClick=${() => { location.hash = 'schule'; }}><span class="t"><span class="dot" style=${'background:' + mc(x.kid)}></span>Schule</span><span class="x">Klassenarbeit ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span></button>`)}
           ${evs.map(e => html`<button type="button" class="ev" style=${'background:' + mt(e.who || 'familie')} onClick=${() => setSheet({ kind:'detail', ev: e })}>
             <span class="t"><span class="dot" style=${'background:' + mc(e.who || 'familie')}></span>${e.time ? e.time + (e.end ? '–' + e.end : '') : 'ganztags'}</span>
@@ -1464,32 +1477,32 @@ function Sterne({ now }){
       <div class="grow">
         <div class="lb">${ranked.map((m, i) => { const tp = P[m.id] || 0; const li = levelIdx(tp); const nx = LEVELS[li + 1];
           const pct = nx ? Math.round((tp - LEVELS[li].at) / (nx.at - LEVELS[li].at) * 100) : 100;
-          return html`<button type="button" class="lbrow" aria-pressed=${sel === m.id} onClick=${() => setSel(m.id)} aria-label=${'Platz ' + ranks[i] + ': ' + m.name + ', ' + val(m.id) + ' Sterne'}>
+          return html`<button type="button" class="lbrow" aria-pressed=${sel === m.id} onClick=${() => setSel(m.id)} aria-label=${'Platz ' + ranks[i] + ': ' + m.name + ', ' + fmtS(val(m.id)) + ' Sterne'}>
             <span class=${'rank' + (val(m.id) > 0 && ranks[i] <= 3 ? ' r' + ranks[i] : '')}>${ranks[i]}</span>
             <${Avatar} id=${m.id} size=${52} ring=${true} />
             <span class="lbx">
               <span class="lbn">${m.name}<span class="lvl">Level ${li + 1} · ${LEVELS[li].name}</span></span>
               <span class="progress" style="height:12px"><span style=${'display:block;height:100%;border-radius:6px;width:' + pct + '%;background:' + mc(m.id)}></span></span>
-              <span class="lbnext">${nx ? 'Noch ' + (nx.at - tp) + ' bis Level ' + (li + 2) + ': ' + rw(nx) : 'Höchstes Level erreicht!'}</span>
+              <span class="lbnext">${nx ? 'Noch ' + fmtS(nx.at - tp) + ' bis Level ' + (li + 2) + ': ' + rw(nx) : 'Höchstes Level erreicht!'}</span>
             </span>
-            <span class="lbs"><${Star} size=${28} />${val(m.id)}</span>
+            <span class="lbs"><${Star} size=${28} />${fmtS(val(m.id))}</span>
           </button>`; })}</div>
         <div class="card">
           <h2 style="font-size:20px;display:flex;align-items:center;gap:8px"><${Icon} n="home" size=${22} />Familienziel</h2>
-          <div class="sub" style="font-size:14px">Alle sammeln zusammen: <b style="color:var(--fg)">${total} Sterne</b>${nextGoal ? ' · noch ' + (nextGoal.at - total) + ' bis „' + fr(nextGoal) + '“' : ' · alle Ziele geschafft!'}</div>
+          <div class="sub" style="font-size:14px">Alle sammeln zusammen: <b style="color:var(--fg)">${fmtS(total)} Sterne</b>${nextGoal ? ' · noch ' + fmtS(nextGoal.at - total) + ' bis „' + fr(nextGoal) + '“' : ' · alle Ziele geschafft!'}</div>
           ${nextGoal ? html`<div class="progress" style="height:14px"><div style=${'width:' + Math.round((total - prevGoalAt) / (nextGoal.at - prevGoalAt) * 100) + '%;background:var(--star)'}></div></div>` : null}
           <div class="ladder">${FAMILY_GOALS.map(g => { const got = total >= g.at; const c = (C.familie || {})[g.at];
             return html`<div class=${'step' + (got ? ' got' : ' locked')}><span class="sn">${g.at}<small>Sterne</small></span>
-              <span class="sx"><b>${fr(g)}</b><span>${got ? (c ? 'Eingelöst am ' + fromIso(c).toLocaleDateString('de-DE') : 'Geschafft! Jetzt einlösen.') : 'Noch ' + (g.at - total) + ' Sterne'}</span></span>
+              <span class="sx"><b>${fr(g)}</b><span>${got ? (c ? 'Eingelöst am ' + fromIso(c).toLocaleDateString('de-DE') : 'Geschafft! Jetzt einlösen.') : 'Noch ' + fmtS(g.at - total) + ' Sterne'}</span></span>
               ${got ? (c ? html`<button type="button" class="claimed" onClick=${() => unclaim('familie', g.at)} aria-label="Einlösen rückgängig">Eingelöst</button>` : html`<button type="button" class="btn small" onClick=${() => claim('familie', g.at)}>Einlösen</button>`) : null}</div>`; })}</div>
         </div>
       </div>
       <aside>
         <div class="card">
-          <div class="row"><${Avatar} id=${sel} size=${44} ring=${true} /><div><h2 style="font-size:20px">${byId[sel].name}</h2><div class="sub" style="font-size:14px">${sp} Sterne · Level ${si + 1} ${LEVELS[si].name}</div></div></div>
+          <div class="row"><${Avatar} id=${sel} size=${44} ring=${true} /><div><h2 style="font-size:20px">${byId[sel].name}</h2><div class="sub" style="font-size:14px">${fmtS(sp)} Sterne · Level ${si + 1} ${LEVELS[si].name}</div></div></div>
           <div class="ladder">${LEVELS.slice(1).map((l, j) => { const got = sp >= l.at; const c = (C[sel] || {})[l.at]; const isNext = !got && levelIdx(sp) === j;
             return html`<div class=${'step' + (got ? ' got' : isNext ? '' : ' locked')}><span class="sn">${j + 2}<small>${l.at} ★</small></span>
-              <span class="sx"><b>${l.name}: ${rw(l)}</b><span>${got ? (c ? 'Eingelöst am ' + fromIso(c).toLocaleDateString('de-DE') : 'Erreicht!') : 'Noch ' + (l.at - sp) + ' Sterne'}</span></span>
+              <span class="sx"><b>${l.name}: ${rw(l)}</b><span>${got ? (c ? 'Eingelöst am ' + fromIso(c).toLocaleDateString('de-DE') : 'Erreicht!') : 'Noch ' + fmtS(l.at - sp) + ' Sterne'}</span></span>
               ${got ? (c ? html`<button type="button" class="claimed" onClick=${() => unclaim(sel, l.at)} aria-label="Einlösen rückgängig">Eingelöst</button>` : html`<button type="button" class="btn small" onClick=${() => claim(sel, l.at)}>Einlösen</button>`) : null}</div>`; })}</div>
           <div class="sub" style="font-size:13px">Belohnungen lösen Mama oder Papa zusammen mit dem Kind ein. Gesammelte Sterne bleiben erhalten.</div>
         </div>
