@@ -131,7 +131,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .cell{position:relative;min-height:56px;border-radius:14px;border:3px solid transparent;display:flex;align-items:center;justify-content:center;padding:4px 8px;text-align:center;font-size:15px;font-weight:800;color:var(--fg);overflow-wrap:anywhere}
 .cell.empty-cell{background:transparent;border:2px dashed var(--line);color:var(--muted);font-weight:600}
 .cell.exam{border-color:var(--warn)}
-.cell .badge{position:absolute;top:-10px;right:6px;background:var(--warn);color:var(--on-m);font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px}
+.cell .badge{position:absolute;top:3px;right:4px;z-index:2;background:var(--warn);color:var(--on-m);font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;line-height:1.4}
+.cell.exam{padding-top:14px}
 .list{display:flex;flex-direction:column;gap:8px}
 .li{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:16px;background:var(--surface-2);min-width:0}
 .li .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
@@ -453,6 +454,14 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
   .shopbar .mic,.shopbar .btn[type=submit]{width:46px;height:46px;min-height:46px!important;padding:0!important;flex-shrink:0}
 }
 @media (max-width:400px){.schoolhead .sub{display:none}.shopbar .whobar h2{display:none}}
+.iconbtn.spk{width:36px;height:36px;border-radius:10px;background:var(--surface-2);flex-shrink:0}
+.freelbl{font-size:11px;font-weight:800;color:var(--ok-ink);background:var(--ok-soft);border-radius:8px;padding:2px 8px;align-self:flex-start}
+.whoname{flex:0 0 82px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:800}
+.whobar .row{flex-wrap:nowrap}
+/* Speichern-Knopf bleibt unten im Fenster an derselben Stelle */
+.sheet form>.btn[type=submit]:last-child,.sheet form>.btn[type=submit]{position:sticky;bottom:0;z-index:3;box-shadow:0 -10px 14px -6px var(--surface)}
+.evform{min-height:min(760px,calc(100vh - 140px))}
+.evform>.btn[type=submit]{margin-top:auto}
 </style>
 
 </head>
@@ -470,8 +479,8 @@ const MEMBERS = [
   { id:'klaus', name:'Klaus', role:'Papa', kid:false },
   { id:'helena', name:'Helena', role:'Mama', kid:false },
   { id:'dorothea', name:'Dorothea', kid:true, school:true },
-  { id:'marlene', name:'Marlene', kid:true, school:true },
-  { id:'clemens', name:'Clemens', kid:true }
+  { id:'marlene', name:'Marlene', kid:true, school:true, speak:true },
+  { id:'clemens', name:'Clemens', kid:true, speak:true }
 ];
 const WHO = MEMBERS.concat([{ id:'familie', name:'Alle' }]);
 const byId = {}; WHO.forEach(m => byId[m.id] = m);
@@ -659,6 +668,12 @@ const pinsDoc = () => (mem_ && mem_.docs['config/pins']) || {};
 const hasPin = who => !!(pinsDoc()[who] && pinsDoc()[who].pin);
 const pinAll = who => !!(pinsDoc()[who] && pinsDoc()[who].pin && pinsDoc()[who].all);
 let pinHost = null;
+/* Neue PIN anlegen (zweimal eingeben) – liefert true bei Erfolg */
+async function createPin(who){
+  const a = await askPin({ mode: 'set', who, title: 'PIN für ' + byId[who].name + ' festlegen', why: 'Noch keine PIN – zum Schützen der Aufgabe einmal 4 Ziffern festlegen' }); if (!a) return false;
+  const b = await askPin({ mode: 'set', who, title: 'PIN wiederholen' }); if (!b) return false;
+  if (a !== b) { toast('Die beiden Eingaben waren verschieden – bitte nochmal.'); return false; }
+  const P = Object.assign({}, pinsDoc()); P[who] = Object.assign({}, P[who] || {}, { pin: await pinHash(who, 'pin', a) }); S.set('config/pins', P); toast('PIN gespeichert'); return true; }
 const askPin = o => new Promise(res => { if (!pinHost) return res(o.mode === 'set' ? null : true); pinHost(Object.assign({}, o, { res })); });
 /* Prüft die PIN von "who" (oder deren Super-PIN oder die Super-PIN von Mama/Papa). Ohne PIN: frei. */
 async function needPin(who, why, superOnly){ if (DEMO) return true; if (!byId[who] || (!hasPin(who) && !superOnly)) return true; return askPin({ mode: 'check', who, why, superOnly }); }
@@ -726,7 +741,27 @@ const toMin = t => { const m = /^(\d{1,2})[:.](\d{2})/.exec(t || ''); return m ?
 const hm = t => { const n = toMin(t); return n == null ? '' : Math.floor(n / 60) + ':' + pad(n % 60); };
 const busCfg = cfg => ({ first: Object.assign({}, BUS_DEFAULT.first, cfg && cfg.first), second: Object.assign({}, BUS_DEFAULT.second, cfg && cfg.second) });
 /* Welcher Bus? Erste Stunde belegt → früher Bus, sonst späterer Bus (mit Betreuung). */
+/* ---------- Schulferien & Feiertage Hessen ---------- */
+const FERIEN_HE = [['2026-06-29','2026-08-07','Sommerferien'],['2026-10-05','2026-10-17','Herbstferien'],['2026-12-23','2027-01-12','Weihnachtsferien'],
+  ['2027-03-22','2027-04-02','Osterferien'],['2027-06-28','2027-08-06','Sommerferien'],['2027-10-04','2027-10-16','Herbstferien'],['2027-12-23','2028-01-11','Weihnachtsferien'],
+  ['2028-04-03','2028-04-14','Osterferien'],['2028-07-03','2028-08-11','Sommerferien']];
+function easterSun(y){ const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+  h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451),
+  mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1; return new Date(y, mo - 1, da, 12); }
+const holCache = {};
+function feiertageHE(y){ if (holCache[y]) return holCache[y]; const E = easterSun(y); const o = {};
+  o[y + '-01-01'] = 'Neujahr'; o[iso(addDays(E, -2))] = 'Karfreitag'; o[iso(addDays(E, 1))] = 'Ostermontag'; o[y + '-05-01'] = 'Tag der Arbeit';
+  o[iso(addDays(E, 39))] = 'Christi Himmelfahrt'; o[iso(addDays(E, 50))] = 'Pfingstmontag'; o[iso(addDays(E, 60))] = 'Fronleichnam';
+  o[y + '-10-03'] = 'Tag der Deutschen Einheit'; o[y + '-12-25'] = '1. Weihnachtstag'; o[y + '-12-26'] = '2. Weihnachtstag';
+  return (holCache[y] = o); }
+/* Schulfrei? → Name (Ferien, Feiertag oder selbst eingetragener freier Tag) oder null */
+function schoolFree(ds){
+  const f = FERIEN_HE.find(x => ds >= x[0] && ds <= x[1]); if (f) return f[2];
+  const h = feiertageHE(+ds.slice(0, 4))[ds]; if (h) return h;
+  const extra = (mem_ && mem_.docs['config/freidays'] && mem_.docs['config/freidays'].days) || {}; if (extra[ds]) return extra[ds];
+  return null; }
 function busFor(tt, d, cfg, skip){
+  if (schoolFree(iso(d))) return null;
   const wd = d.getDay(); if (!tt || !tt.days || wd < 1 || wd > 5) return null;
   const col = tt.days[wd - 1] || [];
   const i = col.findIndex(f => f && !/pause|frei|betreuung/i.test(f));
@@ -784,6 +819,7 @@ const IC = {
   lock:'M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3M12 15v2',
   unlock:'M6 11h12v10H6zM8 11V8a4 4 0 0 1 7.5-2M12 15v2',
   undo:'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
+  speaker:'M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11',
   music:'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zM20 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3z'
 };
 const TASK_ICONS = ['shirt','tooth','bed','bowl','shoe','bag','lunch','dish','bin','car','book','basket','fork','pencil','drop','moon','blocks','paw','music','star'];
@@ -942,6 +978,7 @@ async function startSync(){
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadAll().catch(() => {}); });
   setInterval(() => loadAll().catch(() => {}), 120000);
   resolveReady(true);
+  setTimeout(autoBackup, 4000); setInterval(autoBackup, 5 * 60 * 1000);
 }
 mem_ = mem;
 /* ---------- Demo-Zugang: nur ansehen, Beispieldaten, nichts wird gespeichert ---------- */
@@ -985,13 +1022,28 @@ function demoData(){
   d[weekDoc(t)] = { klaus:2, helena:3, dorothea:6, marlene:5, clemens:4 };
   return d;
 }
+/* ---------- Tägliche Datensicherung (um 0 Uhr, vom ersten Gerät, das danach läuft) ---------- */
+const BACKUP_KEEP = 14;
+function makeSnapshot(){ const o = {}; Object.keys(mem.docs).forEach(k => { if (k.indexOf('backup/') !== 0) o[k] = mem.docs[k]; }); return o; }
+function autoBackup(){
+  if (DEMO || !mem_) return; const k = 'backup/' + iso(new Date()); if (mem.docs[k]) return;
+  quietly(() => { S.set(k, { at: Date.now(), docs: makeSnapshot() });
+    Object.keys(mem.docs).filter(x => x.indexOf('backup/') === 0).sort().reverse().slice(BACKUP_KEEP).forEach(x => S.del(x)); });
+}
+async function restoreBackup(key){
+  const b = mem.docs[key]; if (!b || !b.docs) return false;
+  quietly(() => { const keep = b.docs;
+    Object.keys(mem.docs).forEach(k => { if (k.indexOf('backup/') !== 0 && !(k in keep)) S.del(k); });
+    Object.keys(keep).forEach(k => S.set(k, keep[k])); });
+  return true;
+}
 function startDemo(){ DEMO = true; mem.docs = demoData(); memNotify(); resolveReady(true); }
 const demoBlock = () => { toast('Demo-Zugang: Hier kann nur angeschaut werden.'); return Promise.resolve(); };
 /* ---------- Rückgängig: jede Änderung merkt sich den vorherigen Stand ---------- */
 const undoStack = []; let undoGroup = null; let undoQuiet = false;
 function recordUndo(p){
   if (undoQuiet) return; const now = Date.now();
-  if (!undoGroup || now - undoGroup.t > 900) { undoGroup = { t: now, items: {} }; undoStack.push(undoGroup); if (undoStack.length > 30) undoStack.shift(); }
+  if (!undoGroup || now - undoGroup.t > 900) { undoGroup = { t: now, items: {} }; undoStack.push(undoGroup); if (undoStack.length > 5) undoStack.shift(); }
   if (!(p in undoGroup.items)) undoGroup.items[p] = mem.docs[p] === undefined ? null : JSON.parse(JSON.stringify(mem.docs[p]));
   undoGroup.t = now; setTimeout(() => window.dispatchEvent(new CustomEvent('fb-undo')), 0);
 }
@@ -1300,6 +1352,11 @@ function PinPad({ mode, who, why, title, superOnly, onDone }){
     </div></div>`;
 }
 /* ---------- Fliegender Stern beim Abhaken ---------- */
+const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in window;
+function sayIt(text){ try { const u = new SpeechSynthesisUtterance(text); u.lang = 'de-DE'; u.rate = .9; const v = speechSynthesis.getVoices().find(x => /^de/i.test(x.lang)); if (v) u.voice = v; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} }
+/* Wer benutzt dieses Gerät? (wird überall vorausgewählt) */
+const getMe = () => { try { const v = localStorage.getItem('fb-me'); return v && byId[v] ? v : null; } catch (e) { return null; } };
+const setMe = id => { try { if (id) localStorage.setItem('fb-me', id); else localStorage.removeItem('fb-me'); } catch (e) {} };
 const STAR_SVG = '<svg viewBox="0 0 24 24" width="44" height="44" fill="#F2A93B" stroke="#C9821A" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3l-5.5 2.9 1-6.2L3 9.6l6.2-.9z"/></svg>';
 function flyStars(from, whos, amount){
   try {
@@ -1353,6 +1410,11 @@ function Profile({ id, onClose }){
   const remove = async () => { if (!(await needPin(id, 'PIN entfernen', true))) return;
     const P = Object.assign({}, pinsDoc()); P[id] = Object.assign({}, P[id] || {}); delete P[id].pin; P[id].all = false; S.set('config/pins', P); toast('PIN entfernt'); };
   return html`<${Sheet} title=${'Profil von ' + m.name} onClose=${onClose}>
+    <div class="card" style="background:var(--surface-2);flex-direction:row;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div><b style="font-size:16px">Dieses Gerät gehört ${m.name}</b><div class="sub" style="font-size:13px">Dann ist ${m.name} z. B. in der Einkaufsliste und Wunschbox schon vorausgewählt.</div></div>
+      ${getMe() === id ? html`<button type="button" class="btn small ghost" onClick=${() => { setMe(null); toast('Gerät ist keiner Person mehr zugeordnet'); onClose(); }}>Zuordnung aufheben</button>`
+        : html`<button type="button" class="btn small" onClick=${() => { setMe(id); toast('Dieses Gerät gehört jetzt ' + m.name); onClose(); }}>Ja, das bin ich</button>`}
+    </div>
     <div class="row"><${Avatar} id=${id} size=${60} ring=${true} /><div><h2 style="font-size:22px">${m.name}</h2><div class="sub" style="font-size:14px">${me.pin ? 'PIN ist festgelegt' : 'Noch keine PIN'}${me.sup ? ' · Super-PIN festgelegt' : ''}</div></div></div>
     <div class="card" style="background:var(--surface-2)">
       <h3 style="font-size:17px;display:flex;align-items:center;gap:8px"><${Icon} n="lock" size=${20} />PIN</h3>
@@ -1466,16 +1528,20 @@ function Heute({ now }){
     const next = copyR(r);
     next[md][mid] = list; S.set('config/routines', next);
   };
-  const lockTask = async (mid, i, md) => { md = md || mode; const list = ((r[md] || {})[mid] || []).slice(); const t = list[i]; if (!t) return;
-    if (!hasPin(mid)) { toast(byId[mid].name + ' braucht zuerst eine PIN – Profil öffnen (auf den Namen tippen).'); return; }
-    if (!(await needPin(mid, t.lock ? 'Schloss öffnen' : 'Schloss setzen'))) return;
+  const lockTask = async (mid, i, md) => { md = md || mode; const list = ((mem_.docs['config/routines'] || r)[md] || {})[mid] ? (((mem_.docs['config/routines'] || r)[md] || {})[mid]).slice() : []; const t = list[i]; if (!t) return;
+    if (!hasPin(mid) && !(await createPin(mid))) return;
+    if (t.lock && !(await needPin(mid, 'Schloss öffnen'))) return;
     list[i] = Object.assign({}, t, { lock: !t.lock }); setList(mid, list, md); toast(t.lock ? 'Schloss entfernt' : '„' + t.label + '“ ist jetzt geschützt'); };
   const delTask = async (mid, i, md) => { md = md || mode; const list = ((r[md] || {})[mid] || []); const t = list[i];
     if (t && t.lock && !(await needPin(mid, 'Geschützte Aufgabe löschen'))) return; setList(mid, list.filter((x, j) => j !== i), md); };
-  const lockPT = async t => { if (!hasPin(t.who)) { toast(byId[t.who].name + ' braucht zuerst eine PIN – Profil öffnen (auf den Namen tippen).'); return; }
-    if (!(await needPin(t.who, t.lock ? 'Schloss öffnen' : 'Schloss setzen'))) return; const b = Object.assign({}, t, { lock: !t.lock }); delete b.id; S.set('ptasks/' + t.id, b); };
+  const lockPT = async t => { if (!hasPin(t.who) && !(await createPin(t.who))) return;
+    if (t.lock && !(await needPin(t.who, 'Schloss öffnen'))) return; const b = Object.assign({}, t, { lock: !t.lock }); delete b.id; S.set('ptasks/' + t.id, b); };
   const delPT = async t => { if (t.lock && !(await needPin(t.who, 'Geschützte Aufgabe löschen'))) return; S.del('ptasks/' + t.id); };
   const [prof, setProf] = useState(null);
+  const tapRef = useRef({});
+  const onTap = (key, el, single, dbl) => { const tp = tapRef.current;
+    if (tp.key === key && Date.now() - tp.at < 340) { clearTimeout(tp.timer); tapRef.current = {}; dbl(); return; }
+    clearTimeout(tp.timer); const timer = setTimeout(() => { tapRef.current = {}; single(el); }, 340); tapRef.current = { key, at: Date.now(), timer }; };
   const togglePT = async (t, srcEl) => { const rect = srcEl ? srcEl.getBoundingClientRect() : null; if (!(t.slot && (locked || t.date !== rday)) && (t.lock || pinAll(t.who)) && !(await needPin(t.who, '„' + t.label + '“ bestätigen'))) return;
     if (t.slot && (locked || t.date !== rday)) { toast(past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei – hier kann nichts mehr abgehakt werden.' : 'Das kann man erst ' + SLOTS[slotIdx(t.slot)].adv + ' abhaken.'); return; }
     const body = Object.assign({}, t); delete body.id; const was = !!(t.done && (!t.every || t.doneOn === today)); body.done = !was; if (!was && !DEMO) flyStars(rect, [t.who]); body.doneOn = was ? null : today;
@@ -1533,6 +1599,7 @@ function Heute({ now }){
     <div class="slotbar"><div class="seg" role="group" aria-label="Tageszeit">
           ${SLOTS.map(x => html`<button type="button" aria-pressed=${mode === x.id} onClick=${() => setMode(x.id)} style=${slotIdx(x.id) < slotIdx(slot.id) && mode !== x.id ? 'opacity:.55' : ''}><${Icon} n=${x.icon} size=${22} />${x.name}</button>`)}
         </div></div>
+    ${schoolFree(today) && fromIso(today).getDay() % 6 !== 0 ? html`<div class="hint" style="display:flex;align-items:center;gap:8px"><${Icon} n="sun" size=${18} />Heute schulfrei: ${schoolFree(today)} – kein Bus.</div>` : null}
     <${BusAmpel} buses=${busesOn(now)} allBuses=${busesOn(now, true)} today=${today} />
     ${(chips.length || soonExams.length) ? html`<a href="#kalender" class="todaychips" style="text-decoration:none;color:inherit">
       <span class="sub" style="font-size:14px;font-weight:800">Heute & bald</span>
@@ -1541,7 +1608,7 @@ function Heute({ now }){
     </a>` : null}
     <${Todos} today=${today} />
     ${locked ? html`<div class="hint warn" role="status">${past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei. Du siehst, was erledigt wurde – abhaken geht nicht mehr.' : 'Vorschau: ' + SLOTS[slotIdx(mode)].name + '-Aufgaben kann man ab ' + SLOTS[slotIdx(mode)].from + ' Uhr abhaken.'} <a href="#" onClick=${e => { e.preventDefault(); setMode(slot.id); }} style="color:inherit">Zurück zu jetzt</a></div>` : null}
-    ${edit ? html`<div class="hint">Bearbeiten: Unter jeder Aufgabe „Schloss“ antippen, um sie mit der PIN der Person zu schützen (oder „Geschützt“, um das Schloss wieder zu öffnen). Verschieben: Aufgabe lange gedrückt halten und zu einer anderen Person ziehen.</div>` : null}
+    ${edit ? html`<div class="hint">Tipp: Doppelt auf eine Aufgabe tippen schützt sie mit Schloss. Bearbeiten: Unter jeder Aufgabe „Schloss“ antippen, um sie mit der PIN der Person zu schützen (oder „Geschützt“, um das Schloss wieder zu öffnen). Verschieben: Aufgabe lange gedrückt halten und zu einer anderen Person ziehen.</div>` : null}
     ${routines === undefined ? html`<div class="loading">Routinen werden geladen …</div>` : html`
     <div class="cols">
       ${MEMBERS.map(m => {
@@ -1562,22 +1629,24 @@ function Heute({ now }){
           </div>
           ${pts.map(t => { const d = !!(t.done && (!t.every || t.doneOn === today)); const late = !d && !t.every && t.date < today;
             return html`<div style="display:flex;gap:6px;align-items:center">
-              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${e => togglePT(t, e.currentTarget)} style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed') + (t.slot && locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
+              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${e => onTap('p' + t.id, e.currentTarget, el => togglePT(t, el), () => lockPT(t))} style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed') + (t.slot && locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon || 'star'} size=${28} color=${mc(m.id)} /></span>
                 <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}<span class="when" style=${late ? 'color:var(--warn-ink)' : ''}>${t.every ? everyTxt(t.every) + (t.lastDone && !d ? ' · zuletzt ' + dm(fromIso(t.lastDone)) : '') : late ? 'seit ' + WD[fromIso(t.date).getDay()] + ' ' + dm(fromIso(t.date)) : t.slot ? 'nur heute ' + SLOTS[slotIdx(t.slot)].adv : 'nur heute'}</span></span>
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
               </button>
+              ${m.speak && canSpeak ? html`<button type="button" class="iconbtn spk" aria-label=${'Vorlesen: ' + t.label} onClick=${() => sayIt(t.label)}><${Icon} n="speaker" size=${20} /></button>` : null}
             </div>
             ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockPT(t)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${16} />${t.lock ? 'Geschützt' : 'Schloss'}</button><button type="button" class="chip" aria-label=${t.label + ' löschen'} onClick=${() => delPT(t)}><${Icon} n="bin" size=${16} />Löschen</button></div>` : null}`; })}
           ${[['tag', tagList], [mode, list]].map(([md, L]) => L.map((t, i) => { if (!vis(t) && !edit) return null; const d = !!(checks && checks[m.id + '-' + md + '-' + i]); const lk = md !== 'tag' && locked;
             return html`<div style="display:flex;gap:6px;align-items:center">
               <button type="button" class=${'task' + (drag && drag.mid === m.id && drag.i === i && drag.md === md ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')}
-                onPointerDown=${e => startPress(e, m.id, i, t, md)} onContextMenu=${e => e.preventDefault()} onClick=${e => { if (skipClick.current) return; toggle(m.id, i, md, e.currentTarget); }}
+                onPointerDown=${e => startPress(e, m.id, i, t, md)} onContextMenu=${e => e.preventDefault()} onClick=${e => { if (skipClick.current) return; onTap(m.id + md + i, e.currentTarget, el => toggle(m.id, i, md, el), () => lockTask(m.id, i, md)); }}
                 style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : '') + (lk && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon} size=${28} color=${mc(m.id)} /></span>
                 <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}${t.days || md === 'tag' ? html`<span class="when">${md === 'tag' ? 'ganztags' : ''}${md === 'tag' && t.days ? ' · ' : ''}${t.days ? daysTxt(t.days) : ''}</span>` : null}</span>
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
               </button>
+              ${m.speak && canSpeak ? html`<button type="button" class="iconbtn spk" aria-label=${'Vorlesen: ' + t.label} onClick=${() => sayIt(t.label)}><${Icon} n="speaker" size=${20} /></button>` : null}
             </div>
             ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockTask(m.id, i, md)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${16} />${t.lock ? 'Geschützt' : 'Schloss'}</button><button type="button" class="chip" aria-label=${t.label + ' entfernen'} onClick=${() => delTask(m.id, i, md)}><${Icon} n="bin" size=${16} />Löschen</button></div>` : null}`; }))}
           ${edit ? html`<${AddTask} onAdd=${t => setList(m.id, list.concat([t]))} />` : null}
@@ -1717,10 +1786,7 @@ function Kalender({ now }){
         const evs = events.filter(e => evOn(e, ds) && visible(e)).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
         const ex = exams.filter(x => x.datum === ds && !hidden[x.kid]);
         return html`<section class=${'day' + (ds === today ? ' today' : '')} aria-label=${d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}>
-          <div class="dayhead"><span>${ds === today ? 'Heute' : ds === iso(addDays(now, 1)) ? 'Morgen' : WD[d.getDay()]}</span><span class="n">${d.getDate()}.${d.getMonth() + 1}.</span></div>
-          ${busesOn(d).filter(b => !hidden[b.kid]).map(b => html`<button type="button" class="ev busev" style=${'background:' + mt(b.kid)} onClick=${() => { location.hash = 'schule'; }}>
-            <span class="t"><span class="dot" style=${'background:' + mc(b.kid)}></span>${b.dep}${b.arr ? '–' + b.arr : ''}</span>
-            <span class="x">${b.car ? 'Ohne Bus' : 'Bus'} · ${byId[b.kid].name}</span></button>`)}
+          <div class="dayhead"><span>${ds === today ? 'Heute' : ds === iso(addDays(now, 1)) ? 'Morgen' : WD[d.getDay()]}</span><span class="n">${d.getDate()}.${d.getMonth() + 1}.</span></div>${schoolFree(ds) ? html`<div class="freelbl">${schoolFree(ds)}</div>` : null}
           ${onlyEv ? null : todos.filter(t => todoOn(t, ds, today) && whoOf(t, ds).some(x => !hidden[x])).map(t => { const ws = whoOf(t, ds); const w = ws.find(x => !hidden[x]) || ws[0]; return html`<button type="button" class="ev todoev" style=${w ? 'background:' + mt(w) : ''} onClick=${() => setSheet({ kind:'todo', t, ds })}>
             <span class="t">${w ? html`<span class="dot" style=${'background:' + mc(w)}></span>erledigt · ${names(ws)}` : 'Aufgabe für alle'}${t.slot ? ' · ' + SLOTS[slotIdx(t.slot)].adv : ''}</span><span class="x">${t.title}</span></button>`; })}
           ${onlyEv ? null : ptasks.filter(t => !hidden[t.who] && (t.every ? (t.lastDone === ds || (t.done && t.doneOn === ds)) : t.done && (t.doneOn || t.date) === ds)).map(t => html`<button type="button" class="ev ptev" style=${'background:' + mt(t.who)} onClick=${() => setSheet({ kind:'pt', t })}>
@@ -1758,10 +1824,10 @@ function EventForm({ date, onClose, kind0, fixed, init }){
     S.add('events', Object.assign({ title: f.title.trim(), date: f.date, time: f.time || null, end: f.end || null, who: f.who, source:'hand' }, recur, rk && f.until ? { until: f.until } : {}));
     onClose(); toast(rk ? 'Termin gespeichert · ' + (EV_REPS.find(r => r[0] === rk) || ['', ''])[1] : 'Termin gespeichert'); };
   return html`<${Sheet} title=${todo ? 'Neue Aufgabe für alle' : 'Neuer Termin'} onClose=${onClose}>
-    <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
+    <form class=${fixed ? "" : "evform"} style="display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
       ${fixed ? null : html`<div class="seg" role="group" aria-label="Art">
-        <button type="button" aria-pressed=${!todo} onClick=${() => setKind('event')}><${Icon} n="cal" size=${20} />Termin</button>
-        <button type="button" aria-pressed=${todo} onClick=${() => setKind('todo')}><${Icon} n="star" size=${20} />Aufgabe für alle</button>
+        <button type="button" aria-pressed=${!todo} onClick=${e => { setKind('event'); const o = e.currentTarget.closest('.overlay'); if (o) o.scrollTop = 0; }}><${Icon} n="cal" size=${20} />Termin</button>
+        <button type="button" aria-pressed=${todo} onClick=${e => { setKind('todo'); const o = e.currentTarget.closest('.overlay'); if (o) o.scrollTop = 0; }}><${Icon} n="star" size=${20} />Aufgabe für alle</button>
       </div>`}
       ${todo ? html`<div class="sub" style="font-size:14px">Gehört niemandem fest. Wer sie erledigt, tippt sich ein und bekommt die Sterne.</div>` : null}
       ${init && init.heard ? html`<div class="hint">Verstanden: „${init.heard}“ – bitte kurz prüfen.</div>` : null}
@@ -1772,7 +1838,7 @@ function EventForm({ date, onClose, kind0, fixed, init }){
         ${todo ? null : html`<${TimeField} id="ev-time" label="Von (leer = ganztags)" value=${f.time} onChange=${v => up('time', v)} style="flex:1 1 120px" />
         <${TimeField} id="ev-end" label="Bis" value=${f.end} onChange=${v => up('end', v)} style="flex:1 1 120px" />`}
       </div>
-      ${todo ? html`<div class="field">Wiederholen?<div class="row" style="gap:6px">${REPEATS.map(r => html`<button type="button" class="chip" aria-pressed=${f.repeat === r[0]} onClick=${() => up('repeat', r[0])}>${r[1]}${r[0] === 'weekly' ? ' (' + WD[fromIso(f.date).getDay()] + ')' : ''}</button>`)}</div></div>
+      <div key=${kind} style="display:flex;flex-direction:column;gap:12px">${todo ? html`<div class="field">Wiederholen?<div class="row" style="gap:6px">${REPEATS.map(r => html`<button type="button" class="chip" aria-pressed=${f.repeat === r[0]} onClick=${() => up('repeat', r[0])}>${r[1]}${r[0] === 'weekly' ? ' (' + WD[fromIso(f.date).getDay()] + ')' : ''}</button>`)}</div></div>
         ${todo && f.repeat === 'interval' ? html`<div class="field">Wie oft? (zählt ab dem letzten Erledigen)<div class="row" style="gap:6px">${EVERY.map(n => html`<button type="button" class="chip" aria-pressed=${(f.every || 4) === n} onClick=${() => up('every', n)}>${everyTxt(n)}</button>`)}</div></div>` : null}
         ${f.repeat === 'interval' ? null : html`<div class="field">Wann am Tag? (mehrere antippen möglich)<div class="row" style="gap:6px">
           <button type="button" class="chip" aria-pressed=${!(f.tslots && f.tslots.length)} onClick=${() => up('tslots', [])}>Ganztags</button>
@@ -1782,8 +1848,8 @@ function EventForm({ date, onClose, kind0, fixed, init }){
       : html`<div class="field">Wiederholen?<div class="row" style="gap:6px">${EV_REPS.map(r => html`<button type="button" class="chip" aria-pressed=${(f.evrep || '') === r[0]} onClick=${() => up('evrep', r[0])}>${r[1]}</button>`)}</div></div>
         ${f.evrep ? html`<div class="field">Bis wann? <div class="row" style="gap:6px"><button type="button" class="chip" aria-pressed=${!f.until} onClick=${() => up('until', '')}>Ohne Ende</button><button type="button" class="chip" aria-pressed=${!!f.until} onClick=${() => up('until', f.until || iso(addDays(fromIso(f.date), 90)))}>Enddatum wählen</button></div></div>
           ${f.until ? html`<${DateField} label="Letzter Termin" value=${f.until} onChange=${v => up('until', v)} />` : null}` : null}
-        <div class="field">Für wen?<${WhoPicker} value=${f.who} onChange=${v => up('who', v)} list=${WHO} /></div>`}
-      <button class="btn" type="submit">Speichern</button>
+        <div class="field">Für wen?<${WhoPicker} value=${f.who} onChange=${v => up('who', v)} list=${WHO} /></div>`}</div>
+      <button key="save" class="btn" type="submit">Speichern</button>
     </form>
   <//>`;
 }
@@ -1963,7 +2029,25 @@ function BusCard({ tt, kid, now }){
         <b style="width:28px">${WD[w.d.getDay()]}</b>
         <div class="tx">${w.b ? html`<b>${w.b.car ? 'Ohne Bus, los um ' : ''}${w.b.dep} Uhr</b><span>Unterricht ab ${w.b.lesson}. Std.${w.b.note && !w.b.car ? ' · ' + w.b.note : ''}</span>` : html`<span>${w.none ? 'ohne Bus (keine Uhrzeit eingetragen)' : tt ? 'kein Unterricht eingetragen' : 'erst Stundenplan eintragen'}</span>`}</div>
       </div>`)}</div>
-      <div class="sub" style="font-size:13px">Gilt für ${SCHOOL.map(m => m.name).join(' und ')}. Der Bus ergibt sich aus der ersten Stunde im Stundenplan. Auf „Heute“ zeigt eine Ampel, wann es losgeht: grün = noch Zeit, orange ab 15 Min., rot ab 5 Min. Dort kann man den Bus auch nur für heute ignorieren.</div>`}
+      <${FreeDays} />
+      <div class="sub" style="font-size:13px">Gilt für ${SCHOOL.map(m => m.name).join(' und ')}. In den hessischen Schulferien und an Feiertagen gibt es keinen Bus und keine Ampel. Der Bus ergibt sich aus der ersten Stunde im Stundenplan. Auf „Heute“ zeigt eine Ampel, wann es losgeht: grün = noch Zeit, orange ab 15 Min., rot ab 5 Min. Dort kann man den Bus auch nur für heute ignorieren.</div>`}
+  </div>`;
+}
+function FreeDays(){
+  const fd = useDoc('config/freidays'); const days = (fd && fd.days) || {};
+  const [open, setOpen] = useState(false); const [d, setD] = useState(iso(new Date())); const [nm, setNm] = useState('Beweglicher Ferientag');
+  const today = iso(new Date());
+  const next = FERIEN_HE.filter(x => x[1] >= today).slice(0, 2);
+  const add = () => { const o = Object.assign({}, days, { [d]: nm.trim() || 'schulfrei' }); S.set('config/freidays', { days: o }); toast('Freier Tag eingetragen'); };
+  const del = k => { const o = Object.assign({}, days); delete o[k]; S.set('config/freidays', { days: o }); };
+  return html`<div class="field">Schulfrei
+    <div class="list">${next.map(x => html`<div class="li"><div class="tx"><b>${x[2]}</b><span>${dm(fromIso(x[0]))}${fromIso(x[0]).getFullYear()} – ${dm(fromIso(x[1]))}${fromIso(x[1]).getFullYear()}</span></div></div>`)}
+      ${Object.keys(days).sort().filter(k => k >= today).map(k => html`<div class="li"><div class="tx"><b>${days[k]}</b><span>${fromIso(k).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric', year:'numeric' })}</span></div>
+        <button type="button" class="iconbtn" aria-label=${days[k] + ' löschen'} onClick=${() => del(k)}><${Icon} n="bin" size=${18} /></button></div>`)}</div>
+    ${open ? html`<${DateField} label="Tag" value=${d} onChange=${setD} />
+      <label class="field">Bezeichnung<input id="fd-name" value=${nm} onInput=${e => setNm(e.target.value)} /></label>
+      <div class="row"><button type="button" class="btn small" onClick=${() => { add(); setOpen(false); }}>Eintragen</button><button type="button" class="btn small ghost" onClick=${() => setOpen(false)}>Abbrechen</button></div>`
+      : html`<button type="button" class="btn small ghost" onClick=${() => setOpen(true)}><${Icon} n="plus" size=${16} />Freien Tag eintragen (z. B. beweglicher Ferientag)</button>`}
   </div>`;
 }
 function ExamForm({ kid, subjects, now }){
@@ -2035,7 +2119,7 @@ function TimetableImport({ kid, onClose }){
 const QUICK = ['Milch','Brot','Eier','Butter','Bananen','Äpfel','Joghurt','Nudeln','Käse','Klopapier'];
 function Einkauf(){
   const items = useCol('shopping');
-  const [who, setWho] = useState('helena');
+  const [who, setWho] = useState(() => getMe() || 'helena');
   const [text, setText] = useState('');
   const [heard, setHeard] = useState('');
   const inputRef = useRef(null);
@@ -2060,7 +2144,7 @@ function Einkauf(){
       <div class="grow">
         <div class="stickbar shopbar"><div class="card whobar" style="padding:12px 16px"><div class="row" style="gap:12px;align-items:center">
           <h2 style="font-size:17px;margin:0">Wer trägt ein?</h2><${WhoPicker} value=${who} onChange=${setWho} label="Wer trägt ein?" />
-          <span class="sub" style="font-size:14px;font-weight:800;color:${'var(--fg)'}">${byId[who] ? byId[who].name : ''}</span></div></div>
+          <span class="whoname">${byId[who] ? byId[who].name : ''}</span></div></div>
         <form data-quick="1" class="row" style="flex-wrap:nowrap" onSubmit=${add}>
           <label style="flex:1;min-width:0;display:flex"><span class="sr">Neuer Eintrag</span>
             <input ref=${inputRef} id="shop-new" class="input" style="height:56px;font-size:18px" value=${text} onInput=${e => setText(e.target.value)} placeholder="Was fehlt? (z. B. Milch, Eier und Brot)" /></label>
@@ -2095,7 +2179,7 @@ function Essen({ now }){
   const [off, setOff] = useState(0);
   const plan = useCol('mealplan');
   const wishes = useCol('wishes');
-  const [who, setWho] = useState('clemens');
+  const [who, setWho] = useState(() => { const me = getMe(); return me || 'clemens'; });
   const [wmeal, setWmeal] = useState('');
   const [text, setText] = useState('');
   const [heard, setHeard] = useState('');
@@ -2270,8 +2354,12 @@ function Sterne({ now }){
   const total = MEMBERS.reduce((s, m) => s + (P[m.id] || 0), 0);
   const nextGoal = FAMILY_GOALS.find(g => total < g.at);
   const prevGoalAt = FAMILY_GOALS.filter(g => total >= g.at).reduce((s, g) => g.at, 0);
-  const claim = (who, at) => { const c = Object.assign({}, C); c[who] = Object.assign({}, c[who] || {}, { [at]: iso(now) }); S.set('rewards/claims', c); toast('Belohnung eingelöst – viel Spaß!'); };
-  const unclaim = (who, at) => { const c = Object.assign({}, C); c[who] = Object.assign({}, c[who] || {}); delete c[who][at]; S.set('rewards/claims', c); };
+  /* Belohnungen ändern/einlösen nur mit Super-PIN von Mama oder Papa */
+  const parentOk = async why => { if (DEMO) return true; const P = pinsDoc();
+    if (!MEMBERS.some(m => !m.kid && P[m.id] && P[m.id].sup)) { toast('Bitte zuerst bei Mama oder Papa eine Super-PIN festlegen (auf „Heute“ den Namen antippen).'); return false; }
+    return needPin('helena', why + ' – Super-PIN von Mama oder Papa', true); };
+  const claim = async (who, at) => { if (!(await parentOk('Belohnung einlösen'))) return; const c = Object.assign({}, C); c[who] = Object.assign({}, c[who] || {}, { [at]: iso(now) }); S.set('rewards/claims', c); toast('Belohnung eingelöst – viel Spaß!'); };
+  const unclaim = async (who, at) => { if (!(await parentOk('Einlösen rückgängig machen'))) return; const c = Object.assign({}, C); c[who] = Object.assign({}, c[who] || {}); delete c[who][at]; S.set('rewards/claims', c); };
   const sp = P[sel] || 0; const si = levelIdx(sp);
   if (points === undefined) return html`<div class="loading">Sterne werden geladen …</div>`;
   return html`
@@ -2282,7 +2370,7 @@ function Sterne({ now }){
           <button type="button" aria-pressed=${mode === 'woche'} onClick=${() => setMode('woche')}>Diese Woche</button>
           <button type="button" aria-pressed=${mode === 'gesamt'} onClick=${() => setMode('gesamt')}>Insgesamt</button>
         </div>
-        <button type="button" class="btn small ghost" onClick=${() => setEdit(true)}><${Icon} n="edit" size=${16} />Belohnungen</button>
+        <button type="button" class="btn small ghost" onClick=${async () => { if (await parentOk('Belohnungen ändern')) setEdit(true); }}><${Icon} n="lock" size=${16} />Belohnungen</button>
       </div>
     </div>
     <div class="split">
@@ -2324,6 +2412,7 @@ function Sterne({ now }){
         </div>
       </aside>
     </div>
+    ${DEMO ? null : html`<${BackupCard} />`}
     ${edit ? html`<${RewardEdit} R=${R} rw=${rw} fr=${fr} onClose=${() => setEdit(false)} />` : null}`;
 }
 function StarStats({ id, now, points, week }){
@@ -2361,6 +2450,25 @@ function StarStats({ id, now, points, week }){
       ${mine.length > 12 ? html`<button type="button" class="btn small ghost" onClick=${() => setMore(!more)}>${more ? 'Weniger anzeigen' : 'Alle ' + mine.length + ' anzeigen'}</button>` : null}`
       : html`<div class="sub" style="font-size:14px">Noch nichts erledigt.</div>`}
     </div>
+  </div>`;
+}
+function BackupCard(){
+  const [, force] = useState(0);
+  useEffect(() => { const f = () => force(x => x + 1); mem.subs.add(f); return () => mem.subs.delete(f); }, []);
+  const list = Object.keys(mem.docs).filter(k => k.indexOf('backup/') === 0).sort().reverse();
+  const [sel, setSel] = useState(null);
+  const dl = key => { try { const b = mem.docs[key]; const blob = new Blob([JSON.stringify(b, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'familienboard-' + key.slice(7) + '.json'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { toast('Herunterladen ging nicht'); } };
+  const restore = async key => { if (!(await needPin('helena', 'Sicherung wiederherstellen – Super-PIN von Mama oder Papa', true))) return;
+    if (await restoreBackup(key)) { toast('Stand vom ' + fromIso(key.slice(7)).toLocaleDateString('de-DE') + ' wiederhergestellt'); setSel(null); } };
+  return html`<div class="card">
+    <h2 style="font-size:20px;display:flex;align-items:center;gap:8px"><${Icon} n="undo" size=${20} />Datensicherung</h2>
+    <div class="sub" style="font-size:14px">Jede Nacht um 0 Uhr wird alles gesichert (die letzten ${BACKUP_KEEP} Tage bleiben erhalten). Läuft gerade kein Gerät, holt das erste Gerät die Sicherung nach.</div>
+    ${list.length ? html`<div class="list">${list.map(k => html`<div class="li"><div class="tx"><b>${fromIso(k.slice(7)).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric', year:'numeric' })}</b>
+        <span>${mem.docs[k].at ? 'gesichert um ' + new Date(mem.docs[k].at).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' }) + ' Uhr' : ''}</span></div>
+        ${sel === k ? html`<button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => restore(k)}>Wirklich zurück?</button><button type="button" class="btn small ghost" onClick=${() => setSel(null)}>Nein</button>`
+          : html`<button type="button" class="btn small ghost" onClick=${() => dl(k)}>Laden</button><button type="button" class="btn small ghost" onClick=${() => setSel(k)}>Wiederherstellen</button>`}</div>`)}</div>`
+      : html`<div class="sub" style="font-size:14px">Die erste Sicherung entsteht in wenigen Sekunden.</div>`}
   </div>`;
 }
 function RewardEdit({ R, rw, fr, onClose }){
