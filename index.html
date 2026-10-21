@@ -1151,7 +1151,7 @@ function TypePreview(){
       if (vv && ih - vv.height > 120) setPos('bottom:' + Math.max(0, Math.round(ih - (vv.offsetTop + vv.height))) + 'px');
       else if (maxH - ih > 120) setPos('bottom:0');
       else setPos('top:0'); };
-    const upd = () => { const c = curRef.current; if (!c) return; setSt({ label: lab(c), val: c.value, ph: c.placeholder || '', type: c.type === 'password' ? 'password' : c.type === 'email' ? 'email' : 'text', im: c.getAttribute('inputmode') || '' }); place(); };
+    const upd = () => { const c = curRef.current; if (!c) return; setSt({ label: lab(c), val: c.value, quick: !!(c.form && c.form.getAttribute('data-quick')), ph: c.placeholder || '', type: c.type === 'password' ? 'password' : c.type === 'email' ? 'email' : 'text', im: c.getAttribute('inputmode') || '' }); place(); };
     const fin = e => { if (e.target === pv.current) return; if (ok(e.target)) { curRef.current = e.target; upd(); setTimeout(place, 400); } };
     const fout = () => setTimeout(() => { const a = document.activeElement; if (curRef.current && a !== curRef.current && a !== pv.current) { curRef.current = null; setSt(null); } }, 120);
     const inp = e => { if (e.target === curRef.current) upd(); };
@@ -1171,14 +1171,17 @@ function TypePreview(){
     if (f) { if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
     else c.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     if (pv.current) pv.current.blur(); };
-  const done = () => { if (pv.current) pv.current.blur(); const c = curRef.current; if (c) c.blur(); curRef.current = null; setSt(null); };
+  const quick = () => { const c = curRef.current; return !!(c && c.form && c.form.getAttribute('data-quick') && c.value.trim()); };
+  const done = () => { const c = curRef.current;
+    if (quick()) { const f = c.form; if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
+    if (pv.current) pv.current.blur(); if (c) c.blur(); curRef.current = null; setSt(null); };
   if (!st) return null;
   return html`<div class="typeprev" style=${pos}>
     <label class="tl" for="typeprev-in">${st.label}</label>
     <div class="tprow">
       <input id="typeprev-in" ref=${pv} class="tvin" type=${st.type} inputmode=${st.im || undefined} autocomplete="off" value=${st.val} placeholder=${st.ph}
         onInput=${e => push(e.target.value)} onKeyDown=${e => { if (e.key === 'Enter') { e.preventDefault(); enter(); } }} />
-      <button type="button" class="btn small" onPointerDown=${e => e.preventDefault()} onClick=${done}>Fertig</button>
+      <button type="button" class="btn small" onPointerDown=${e => e.preventDefault()} onClick=${done}>${st.quick ? html`<${Icon} n="plus" size=${18} />Hinzufügen` : 'Fertig'}</button>
     </div></div>`;
 }
 function Todos({ today }){
@@ -1594,7 +1597,7 @@ function PersonTaskForm({ mid, mode0, r, onClose, init }){
 }
 function AddTask({ onAdd }){
   const [label, setLabel] = useState(''); const [icon, setIcon] = useState('star');
-  return html`<form style="display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:16px;background:var(--surface-2)" onSubmit=${e => { e.preventDefault(); if (!label.trim()) return; onAdd({ label: label.trim(), icon }); setLabel(''); }}>
+  return html`<form data-quick="1" style="display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:16px;background:var(--surface-2)" onSubmit=${e => { e.preventDefault(); if (!label.trim()) return; onAdd({ label: label.trim(), icon }); setLabel(''); }}>
     <input class="input" style="height:42px" placeholder="Neue Aufgabe" value=${label} onInput=${e => setLabel(e.target.value)} aria-label="Neue Aufgabe" />
     <div class="iconpick" role="group" aria-label="Symbol">${TASK_ICONS.map(k => html`<button type="button" aria-pressed=${icon === k} aria-label=${'Symbol ' + k} onClick=${() => setIcon(k)}><${Icon} n=${k} size=${20} /></button>`)}</div>
     <button class="btn small" type="submit"><${Icon} n="plus" size=${18} />Hinzufügen</button>
@@ -1988,7 +1991,7 @@ function Einkauf(){
     <div class="head"><div><h1>Einkaufsliste</h1><div class="sub">${open.length} ${open.length === 1 ? 'Sache' : 'Sachen'} offen · auf allen Geräten gleich</div></div></div>
     <div class="split">
       <div class="grow">
-        <form class="row" style="flex-wrap:nowrap" onSubmit=${add}>
+        <form data-quick="1" class="row" style="flex-wrap:nowrap" onSubmit=${add}>
           <label style="flex:1;min-width:0;display:flex"><span class="sr">Neuer Eintrag</span>
             <input ref=${inputRef} id="shop-new" class="input" style="height:56px;font-size:18px" value=${text} onInput=${e => setText(e.target.value)} placeholder="Was fehlt? (z. B. Milch, Eier und Brot)" /></label>
           <${MicButton} voice=${voice} label="Per Sprache eintragen" />
@@ -2069,7 +2072,7 @@ function Essen({ now }){
         <div class="row" role="group" aria-label="Für welche Mahlzeit?" style="gap:6px">
           ${[{ id:'', name:'egal' }].concat(MEALS).map(m => html`<button type="button" class="chip" aria-pressed=${wmeal === m.id} onClick=${() => setWmeal(m.id)}>${m.id ? m.name : 'Egal wann'}</button>`)}
         </div>
-        <form class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); if (addWish(text)) { setText(''); voice.clearFallback(); setHeard('Wunsch gespeichert'); } }}>
+        <form data-quick="1" class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); if (addWish(text)) { setText(''); voice.clearFallback(); setHeard('Wunsch gespeichert'); } }}>
           <label style="flex:1;min-width:0;display:flex"><span class="sr">Wunsch</span><input ref=${inputRef} id="wish-new" class="input" value=${text} onInput=${e => setText(e.target.value)} placeholder=${byId[who].name + ', was möchtest du?'} /></label>
           <${MicButton} voice=${voice} label=${byId[who].name + ': Wunsch sagen'} />
         </form>
@@ -2110,7 +2113,7 @@ function MealPick({ ds, meal, cur, wishes, onClose }){
     <div class="field">Wer wünscht es sich? (optional)<${WhoPicker} value=${by} onChange=${v => setBy(by === v ? null : v)} /></div>
     <h3 style="font-size:16px">Lieblingsessen</h3>
     <div class="foods" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">${CATALOG.map(c => html`<button type="button" class="food" onClick=${() => add(c.name, c.key)}><${Art} k=${c.key} /><span>${c.name}</span></button>`)}</div>
-    <form class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); const t = text.trim(); if (!t) return; const c = matchArt(t); add(t, c ? c.key : 'teller'); setText(''); }}>
+    <form data-quick="1" class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); const t = text.trim(); if (!t) return; const c = matchArt(t); add(t, c ? c.key : 'teller'); setText(''); }}>
       <label style="flex:1;min-width:0;display:flex"><span class="sr">Eigenes Gericht</span><input id="meal-own" class="input" value=${text} onInput=${e => setText(e.target.value)} placeholder=${ml === 'frueh' ? 'z. B. Müsli, Brötchen, Rührei' : 'Eigenes Gericht, z. B. Gemüsecurry'} /></label>
       <button class="btn" type="submit">Planen</button>
     </form>
