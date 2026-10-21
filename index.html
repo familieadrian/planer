@@ -377,6 +377,12 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
   .main{order:1!important;overflow:visible!important;min-height:0;padding-block:14px 40px!important}
   .undobar{bottom:calc(24px + env(safe-area-inset-bottom,0px))!important}
 }
+/* Kalender: Kacheln ab heute, drei nebeneinander */
+.week.week3{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.week.week3 .day{min-height:150px}
+.week.week3 .dayhead{flex-wrap:wrap;gap:2px 6px}
+@media (max-width:600px){.week.week3 .dayhead .n{font-size:17px}.week.week3 .dayhead{font-size:13px}}
+@media (max-width:420px){.week.week3{gap:6px}.week.week3 .day{padding:8px 6px}.week.week3 .ev .x{font-size:12px}}
 </style>
 
 </head>
@@ -1506,8 +1512,10 @@ function Kalender({ now }){
   const [sheet, setSheet] = useState(null);
   const events = useCol('events');
   const exams = useCol('exams') || [];
-  const mon = addDays(monday(now), off * 7);
-  const days = [0,1,2,3,4,5,6].map(i => addDays(mon, i));
+  const PAGE = 12;
+  const start = addDays(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12), off * PAGE);
+  const days = Array.from({ length: PAGE }, (x, i) => addDays(start, i));
+  const mon = start;
   const today = iso(now);
   const visible = e => !hidden[e.who || 'familie'];
   const busesOn = useBuses();
@@ -1515,11 +1523,11 @@ function Kalender({ now }){
   const ptasks = useCol('ptasks') || [];
   return html`
     <div class="head">
-      <div><h1>Kalender · KW ${kw(mon)}</h1><div class="sub">${dm(days[0])} – ${dm(days[6])}${days[6].getFullYear()}</div></div>
+      <div><h1>Kalender${off === 0 ? ' · ab heute' : ''}</h1><div class="sub">${dm(days[0])} – ${dm(days[PAGE - 1])}${days[PAGE - 1].getFullYear()} · KW ${kw(days[0])}${kw(days[PAGE - 1]) !== kw(days[0]) ? '–' + kw(days[PAGE - 1]) : ''}</div></div>
       <div class="row">
-        <button type="button" class="iconbtn" aria-label="Vorige Woche" onClick=${() => setOff(off-1)} style="background:var(--surface)"><${Icon} n="left" /></button>
-        <button type="button" class="btn small ghost" onClick=${() => setOff(0)}>Heute</button>
-        <button type="button" class="iconbtn" aria-label="Nächste Woche" onClick=${() => setOff(off+1)} style="background:var(--surface)"><${Icon} n="right" /></button>
+        ${off > 0 ? html`<button type="button" class="iconbtn" aria-label="Zurück" onClick=${() => setOff(off-1)} style="background:var(--surface)"><${Icon} n="left" /></button>
+        <button type="button" class="btn small ghost" onClick=${() => setOff(0)}>Heute</button>` : null}
+        <button type="button" class="iconbtn" aria-label="Weiter" onClick=${() => setOff(off+1)} style="background:var(--surface)"><${Icon} n="right" /></button>
         <button type="button" class="btn small soft" onClick=${() => setSheet({ kind:'shot' })}><${Icon} n="camera" size=${18} />Per Screenshot</button>
         <button type="button" class="btn small" onClick=${() => setSheet({ kind:'add', date: today })}><${Icon} n="plus" size=${18} />Termin</button>
       </div>
@@ -1530,12 +1538,12 @@ function Kalender({ now }){
         onClick=${() => setHidden(Object.assign({}, hidden, { [m.id]: !hidden[m.id] }))}>${m.id === 'familie' ? 'F' : m.name[0]}</button>`)}
     </div>
     ${events === undefined ? html`<div class="loading">Termine werden geladen …</div>` : html`
-    <div class="week">
+    <div class="week week3">
       ${days.map(d => { const ds = iso(d);
         const evs = events.filter(e => evOn(e, ds) && visible(e)).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
         const ex = exams.filter(x => x.datum === ds && !hidden[x.kid]);
         return html`<section class=${'day' + (ds === today ? ' today' : '')} aria-label=${d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}>
-          <div class="dayhead"><span>${WD[d.getDay()]}</span><span class="n">${d.getDate()}</span></div>
+          <div class="dayhead"><span>${ds === today ? 'Heute' : ds === iso(addDays(now, 1)) ? 'Morgen' : WD[d.getDay()]}</span><span class="n">${d.getDate()}.${d.getMonth() + 1}.</span></div>
           ${busesOn(d).filter(b => !hidden[b.kid]).map(b => html`<button type="button" class="ev busev" style=${'background:' + mt(b.kid)} onClick=${() => { location.hash = 'schule'; }}>
             <span class="t"><span class="dot" style=${'background:' + mc(b.kid)}></span>${b.dep}${b.arr ? '–' + b.arr : ''}</span>
             <span class="x">${b.car ? 'Ohne Bus' : 'Bus'} · ${byId[b.kid].name}</span></button>`)}
