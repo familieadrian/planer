@@ -251,11 +251,10 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .md.out{opacity:.4}
 .md.tdy{outline:2px solid var(--accent);outline-offset:-2px}
 .md[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
-.typeprev{position:fixed;left:0;right:0;z-index:200;background:var(--surface);border-top:3px solid var(--accent);border-bottom:3px solid var(--accent);box-shadow:0 0 18px rgba(0,0,0,.25);padding:10px 20px;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+.typeprev{position:fixed;left:0;right:0;z-index:200;background:var(--surface);border-top:3px solid var(--accent);border-bottom:3px solid var(--accent);box-shadow:0 0 18px rgba(0,0,0,.25);padding:10px 20px;display:flex;flex-direction:column;gap:6px}
 .typeprev .tl{font-size:13px;font-weight:800;color:var(--muted)}
-.typeprev .tv{font-size:28px;font-weight:800;white-space:nowrap;overflow:hidden;min-height:36px}
-.typeprev .tph{color:var(--muted);font-weight:600}
-.typeprev .caret{display:inline-block;width:3px;height:28px;background:var(--accent);vertical-align:-4px;margin-left:2px;animation:blink 1s steps(1) infinite}
+.typeprev .tprow{display:flex;gap:10px;align-items:center}
+.typeprev .tvin{flex:1;min-width:0;height:56px;border:2px solid var(--accent);border-radius:14px;padding:0 14px;font-size:26px;font-weight:800;color:var(--fg);background:var(--surface);white-space:pre}
 @keyframes blink{50%{opacity:0}}
 .todolist{display:flex;flex-wrap:wrap;gap:10px}
 .todo{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 16px 8px 10px;border-radius:18px;border:3px dashed var(--line);background:var(--surface-2);color:var(--fg);font-size:17px;font-weight:800;text-align:left}
@@ -314,6 +313,10 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 .logli .lt b{font-size:15px}.logli .lt span{font-size:12px;color:var(--muted);font-weight:700}
 .logli .ls{display:flex;align-items:center;gap:3px;font-weight:800;font-size:15px}
 @media (max-width:700px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.lbmain .avatar{display:none}}
+.colhead{gap:8px}.colhead .avatar{width:44px;height:44px;font-size:19px;flex-shrink:0}.colhead .stars,.colhead .sub{white-space:nowrap}.colhead>div{flex:1}
+.colhead .addbtn{margin-left:auto;width:38px;height:38px;border-radius:14px;border:2px dashed var(--line);background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.task .when{font-size:11px;font-weight:800;color:var(--muted);display:block}
+.ev.ptev{border:2px solid transparent}
 </style>
 
 </head>
@@ -352,6 +355,11 @@ const dm = d => d.getDate() + '.' + (d.getMonth()+1) + '.';
 function kw(d){ const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate()+4-day); const y0 = new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil(((t-y0)/864e5+1)/7); }
 const daysUntil = (s, now) => Math.round((fromIso(s) - fromIso(iso(now))) / 864e5);
 const countdown = n => n === 0 ? 'heute' : n === 1 ? 'morgen' : 'in ' + n + ' Tagen';
+/* Tagesabschnitte: Morgen 4–12, Mittag 12–18, Abend 18–4 Uhr (nach Mitternacht zählt noch zum Vortag) */
+const SLOTS = [{ id:'morgen', name:'Morgen', adv:'morgens', icon:'sun', from:4 }, { id:'mittag', name:'Mittag', adv:'mittags', icon:'lunch', from:12 }, { id:'abend', name:'Abend', adv:'abends', icon:'moon', from:18 }];
+const slotIdx = id => SLOTS.findIndex(x => x.id === id);
+const slotOf = d => { const h = d.getHours(); const id = h < 4 ? 'abend' : h < 12 ? 'morgen' : h < 18 ? 'mittag' : 'abend'; return { id, day: iso(h < 4 ? addDays(d, -1) : d) }; };
+const copyR = r => { const o = {}; SLOTS.forEach(x => { o[x.id] = Object.assign({}, (r || {})[x.id] || {}); }); return o; };
 
 /* ---------- Sterne, Level & Belohnungen ---------- */
 const LEVELS = [
@@ -392,12 +400,38 @@ function logFix(e, to, points){
   if (points === undefined) { toast('Einen Moment, Sterne werden noch geladen …'); return; }
   const dl = { [e.who]: -e.stars }; if (to) dl[to] = r2((dl[to] || 0) + e.stars);
   givePoints(points, dl, e.date);
+  if (e.kind === 'routine') { const ck = 'checks/' + e.date; const c = Object.assign({}, mem_.docs[ck] || {}); const R = mem_.docs['config/routines'] || {}; const md = e.mode || 'morgen';
+    const lst = (R[md] || {})[e.who] || []; let i = lst.findIndex((t, j) => t.label === e.what && c[e.who + '-' + md + '-' + j]);
+    if (i < 0 && e.idx != null && c[e.who + '-' + md + '-' + e.idx]) i = e.idx;
+    if (i >= 0) delete c[e.who + '-' + md + '-' + i];
+    if (to) { const tl = (R[md] || {})[to] || []; const j = tl.findIndex((t, k) => t.label === e.what && !c[to + '-' + md + '-' + k]); if (j >= 0) c[to + '-' + md + '-' + j] = true; }
+    S.set(ck, c); }
+  if (e.kind === 'ptask' && mem_.docs['ptasks/' + e.ptask]) { const b = Object.assign({}, mem_.docs['ptasks/' + e.ptask]);
+    if (to) b.who = to; else { b.done = false; b.doneOn = null; } S.set('ptasks/' + e.ptask, b); }
   if (e.todo && mem_.docs['todos/' + e.todo]) { const t = Object.assign({ id: e.todo }, mem_.docs['todos/' + e.todo]); const k = e.key || 'once';
     const ws = whoOf(t, e.key && e.key !== 'once' ? e.key : (t.doneOn || e.date)).filter(x => x !== e.who); if (to && ws.indexOf(to) < 0) ws.push(to);
     const done = Object.assign({}, t.done || {}); if (ws.length) done[k] = ws.length === 1 ? ws[0] : ws; else delete done[k];
     const body = Object.assign({}, t, { done }); delete body.id; if (k === 'once') body.doneOn = ws.length ? (t.doneOn || e.date) : null; S.set('todos/' + e.todo, body); }
   if (to) { const b = Object.assign({}, e, { who: to }); delete b.id; S.set('starlog/' + e.id, b); } else S.del('starlog/' + e.id);
-  toast(to ? 'Sterne an ' + byId[to].name + ' übertragen' : 'Eintrag gelöscht, Sterne abgezogen');
+  toast(to ? 'Jetzt bei ' + byId[to].name + ' eingetragen' : 'Abgewählt, Sterne abgezogen');
+}
+/* Ältere Erledigungen (vor Einführung des Protokolls) aus Häkchen und Aufgaben nachtragen */
+function backfillLog(){
+  if (!mem_) return; const docs = mem_.docs; const logs = logAll(); const R = docs['config/routines'] || {};
+  const has = f => logs.some(f);
+  Object.keys(docs).filter(k => k.indexOf('checks/') === 0).forEach(k => { const date = k.slice(7); const c = docs[k] || {};
+    Object.keys(c).forEach(key => { if (!c[key]) return; const m = /^([a-z]+)-(morgen|mittag|abend)-(\d+)$/.exec(key); if (!m) return;
+      const who = m[1], md = m[2], i = +m[3]; if (!byId[who]) return;
+      const t = ((R[md] || {})[who] || [])[i]; const what = t ? t.label : 'Routine';
+      if (has(e => e.kind === 'routine' && e.who === who && e.date === date && e.what === what)) return;
+      S.set('starlog/b-r-' + date + '-' + who + '-' + md + '-' + i, { who, stars: byId[who].kid ? 1 : 0, what, kind: 'routine', mode: md, idx: i, date, at: 0 }); }); });
+  Object.keys(docs).filter(k => k.indexOf('ptasks/') === 0).forEach(k => { const id = k.slice(7); const t = docs[k] || {};
+    if (!t.done || !byId[t.who] || has(e => e.ptask === id)) return;
+    S.set('starlog/b-p-' + id, { who: t.who, stars: byId[t.who].kid ? 1 : 0, what: t.label, kind: 'ptask', ptask: id, date: t.doneOn || t.date, at: 0 }); });
+  Object.keys(docs).filter(k => k.indexOf('todos/') === 0).forEach(k => { const id = k.slice(6); const t = docs[k] || {}; const st = t.stars || 1;
+    Object.keys(t.done || {}).forEach(key => { const w = t.done[key]; const list = Array.isArray(w) ? w : [w]; const date = key === 'once' ? (t.doneOn || t.date) : key; if (!date) return;
+      list.forEach(who => { if (!byId[who] || has(e => e.todo === id && e.key === key && e.who === who)) return;
+        S.set('starlog/b-t-' + id + '-' + key + '-' + who, { who, stars: r2(st / list.length), what: t.title, kind: 'todo', todo: id, key, date, team: list.length > 1 ? list : null, at: 0 }); }); }); });
 }
 
 /* ---------- Offene Aufgaben (für alle) ---------- */
@@ -841,28 +875,45 @@ function TimeField({ label, value, onChange, placeholder, id, style }){
 function TypePreview(){
   const [st, setSt] = useState(null);
   const [pos, setPos] = useState('top:0');
+  const pv = useRef(null); const curRef = useRef(null);
   useEffect(() => {
-    let cur = null, maxH = window.innerHeight;
-    const ok = el => el && ((el.tagName === 'INPUT' && !/^(checkbox|radio|file|button|submit|range|color|hidden)$/i.test(el.type)) || el.tagName === 'TEXTAREA');
+    let maxH = window.innerHeight;
+    const ok = el => el && el !== pv.current && ((el.tagName === 'INPUT' && !/^(checkbox|radio|file|button|submit|range|color|hidden|date|time)$/i.test(el.type)) || el.tagName === 'TEXTAREA');
     const lab = el => { const l = el.getAttribute('aria-label') || (el.labels && el.labels[0] && el.labels[0].firstChild && el.labels[0].firstChild.nodeType === 3 ? el.labels[0].firstChild.textContent : '') || el.placeholder || 'Eingabe'; return l.trim(); };
     const place = () => { const vv = window.visualViewport; const ih = window.innerHeight;
-      if (!cur) maxH = Math.max(maxH, ih);
+      if (!curRef.current) maxH = Math.max(maxH, ih);
       if (vv && ih - vv.height > 120) setPos('bottom:' + Math.max(0, Math.round(ih - (vv.offsetTop + vv.height))) + 'px');
       else if (maxH - ih > 120) setPos('bottom:0');
       else setPos('top:0'); };
-    const upd = () => { if (!cur) return; const v = cur.type === 'password' ? cur.value.replace(/./g, '•') : cur.value; setSt({ label: lab(cur), val: v.length > 60 ? '…' + v.slice(-60) : v, ph: cur.placeholder || '' }); place(); };
-    const fin = e => { if (ok(e.target)) { cur = e.target; upd(); setTimeout(place, 400); } };
-    const fout = e => { if (e.target === cur) setTimeout(() => { if (document.activeElement !== cur) { cur = null; setSt(null); } }, 80); };
-    const inp = e => { if (e.target === cur) upd(); };
+    const upd = () => { const c = curRef.current; if (!c) return; setSt({ label: lab(c), val: c.value, ph: c.placeholder || '', type: c.type === 'password' ? 'password' : c.type === 'email' ? 'email' : 'text', im: c.getAttribute('inputmode') || '' }); place(); };
+    const fin = e => { if (e.target === pv.current) return; if (ok(e.target)) { curRef.current = e.target; upd(); setTimeout(place, 400); } };
+    const fout = () => setTimeout(() => { const a = document.activeElement; if (curRef.current && a !== curRef.current && a !== pv.current) { curRef.current = null; setSt(null); } }, 120);
+    const inp = e => { if (e.target === curRef.current) upd(); };
     document.addEventListener('focusin', fin); document.addEventListener('focusout', fout); document.addEventListener('input', inp, true);
     const vv = window.visualViewport; if (vv) { vv.addEventListener('resize', place); vv.addEventListener('scroll', place); }
     window.addEventListener('resize', place);
     return () => { document.removeEventListener('focusin', fin); document.removeEventListener('focusout', fout); document.removeEventListener('input', inp, true);
       if (vv) { vv.removeEventListener('resize', place); vv.removeEventListener('scroll', place); } window.removeEventListener('resize', place); };
   }, []);
+  /* Eingabe im großen Feld oben an das eigentliche Feld weiterreichen */
+  const push = v => { const c = curRef.current; if (!c) return;
+    const proto = c.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(c, v);
+    c.dispatchEvent(new Event('input', { bubbles: true })); };
+  const enter = () => { const c = curRef.current; if (!c) return;
+    const f = c.form;
+    if (f) { if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
+    else c.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    if (pv.current) pv.current.blur(); };
+  const done = () => { if (pv.current) pv.current.blur(); const c = curRef.current; if (c) c.blur(); curRef.current = null; setSt(null); };
   if (!st) return null;
-  return html`<div class="typeprev" style=${pos} aria-hidden="true"><span class="tl">${st.label}</span>
-    <span class="tv">${st.val ? st.val : html`<span class="tph">${st.ph}</span>`}<span class="caret"></span></span></div>`;
+  return html`<div class="typeprev" style=${pos}>
+    <label class="tl" for="typeprev-in">${st.label}</label>
+    <div class="tprow">
+      <input id="typeprev-in" ref=${pv} class="tvin" type=${st.type} inputmode=${st.im || undefined} autocomplete="off" value=${st.val} placeholder=${st.ph}
+        onInput=${e => push(e.target.value)} onKeyDown=${e => { if (e.key === 'Enter') { e.preventDefault(); enter(); } }} />
+      <button type="button" class="btn small" onPointerDown=${e => e.preventDefault()} onClick=${done}>Fertig</button>
+    </div></div>`;
 }
 function Todos({ today }){
   const todos = useCol('todos') || [];
@@ -870,7 +921,8 @@ function Todos({ today }){
   const list = todos.filter(t => todoOn(t, today, today)).sort((a, b) => (whoOf(a, today).length > 0) - (whoOf(b, today).length > 0) || (a.title || '').localeCompare(b.title || ''));
   return html`<section class="card" aria-label="Aufgaben für alle" style="padding:14px 18px">
     <div class="row" style="justify-content:space-between"><h2 style="font-size:19px">Aufgaben für alle <span class="sub" style="font-size:14px">· wer’s macht, bekommt die Sterne</span></h2>
-      <button type="button" class="btn small ghost" onClick=${() => setAdd(true)}><${Icon} n="plus" size=${18} />Aufgabe</button></div>
+      <div class="row" style="gap:8px"><button type="button" class="btn small ghost" onClick=${() => setAdd('event')}><${Icon} n="cal" size=${18} />Termin</button>
+        <button type="button" class="btn small ghost" onClick=${() => setAdd('todo')}><${Icon} n="plus" size=${18} />Aufgabe für alle</button></div></div>
     ${list.length ? html`<div class="todolist">${list.map(t => { const ws = whoOf(t, today); const who = ws[0];
       return html`<button type="button" class=${'todo' + (who ? ' done' : '')} onClick=${() => setSel(t)} style=${who ? 'background:' + mt(who) + ';border-color:' + mc(who) : ''}
         aria-label=${t.title + (who ? ', erledigt von ' + names(ws) : ', offen')}>
@@ -880,7 +932,7 @@ function Todos({ today }){
       </button>`; })}</div>` : html`<div class="sub" style="font-size:14px">Gerade nichts offen.</div>`}
   </section>
   ${sel ? html`<${TodoClaim} t=${sel} ds=${today} onClose=${() => setSel(null)} />` : null}
-  ${add ? html`<${EventForm} date=${today} kind0="todo" onClose=${() => setAdd(false)} />` : null}`;
+  ${add ? html`<${EventForm} date=${today} kind0=${add} fixed=${true} onClose=${() => setAdd(false)} />` : null}`;
 }
 function TodoClaim({ t, ds, onClose }){
   const points = useDoc('points/all');
@@ -930,42 +982,50 @@ function BusAmpel({ buses }){
 function Heute({ now }){
   const today = iso(now);
   const routines = useDoc('config/routines');
-  const checks = useDoc('checks/' + today);
+  const slot = slotOf(now); const rday = slot.day;
+  const checks = useDoc('checks/' + rday);
   const points = useDoc('points/all');
   const events = useCol('events') || [];
   const exams = useCol('exams') || [];
   const busesOn = useBuses();
-  const [mode, setMode] = useState(now.getHours() < 14 ? 'morgen' : 'abend');
+  const ptasks = useCol('ptasks') || [];
+  const [addFor, setAddFor] = useState(null);
+  const [mode, setMode] = useState(slot.id);
+  useEffect(() => { setMode(slot.id); }, [slot.id]);
+  const locked = mode !== slot.id; const past = slotIdx(mode) < slotIdx(slot.id);
   const [edit, setEdit] = useState(false);
   const r = routines || {};
   const chips = events.filter(e => e.date === today).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
   const soonExams = exams.filter(x => { const n = daysUntil(x.datum, now); return n >= 0 && n <= 3; }).sort((a,b) => a.datum.localeCompare(b.datum));
 
   const toggle = (mid, i) => {
+    if (locked) { toast(past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei – hier kann nichts mehr abgehakt werden.' : SLOTS[slotIdx(mode)].name + '-Aufgaben kann man ab ' + SLOTS[slotIdx(mode)].from + ' Uhr abhaken.'); return; }
     const k = mid + '-' + mode + '-' + i;
     const c = Object.assign({}, checks || {}); const was = !!c[k]; c[k] = !was;
-    S.set('checks/' + today, c);
-    if (byId[mid].kid) { givePoints(points, { [mid]: was ? -1 : 1 });
+    S.set('checks/' + rday, c);
+    { givePoints(points, { [mid]: was ? -1 : 1 });
       const lbl = ((r[mode] || {})[mid] || [])[i]; const what = lbl ? lbl.label : 'Routine';
-      if (was) { const hit = logAll().filter(e => e.kind === 'routine' && e.who === mid && e.date === today && e.what === what)[0]; if (hit) S.del('starlog/' + hit.id); }
-      else logAdd({ who: mid, stars: 1, what, kind: 'routine', mode, date: today }); }
+      if (was) { const hit = logAll().filter(e => e.kind === 'routine' && e.who === mid && e.date === rday && e.what === what)[0]; if (hit) S.del('starlog/' + hit.id); }
+      else logAdd({ who: mid, stars: 1, what, kind: 'routine', mode, date: rday }); }
   };
   const setList = (mid, list) => {
-    const next = { morgen: Object.assign({}, r.morgen || {}), abend: Object.assign({}, r.abend || {}) };
+    const next = copyR(r);
     next[mode][mid] = list; S.set('config/routines', next);
   };
+  const togglePT = t => { const body = Object.assign({}, t); delete body.id; const was = !!t.done; body.done = !was; body.doneOn = was ? null : today; S.set('ptasks/' + t.id, body);
+    { givePoints(points, { [t.who]: was ? -1 : 1 }); if (was) logDrop(e => e.ptask === t.id); else logAdd({ who: t.who, stars: 1, what: t.label, kind: 'ptask', ptask: t.id, date: today }); } };
   /* Aufgabe lange gedrückt halten und zu einer anderen Person ziehen */
   const [drag, setDrag] = useState(null);
   const press = useRef(null); const dragRef = useRef(null); const skipClick = useRef(false);
   const moveTask = (from, i, to) => {
-    const next = { morgen: Object.assign({}, r.morgen || {}), abend: Object.assign({}, r.abend || {}) };
+    const next = copyR(r);
     const src = ((next[mode] || {})[from] || []).slice(); const t = src.splice(i, 1)[0]; if (!t) return;
     const dst = ((next[mode] || {})[to] || []).concat([t]);
     next[mode][from] = src; next[mode][to] = dst; S.set('config/routines', next);
     const c = Object.assign({}, checks || {}); const key = (m, j) => m + '-' + mode + '-' + j; const was = !!c[key(from, i)];
     for (let j = i; j <= src.length; j++) { if (c[key(from, j + 1)]) c[key(from, j)] = true; else delete c[key(from, j)]; }
     if (was) c[key(to, dst.length - 1)] = true; else delete c[key(to, dst.length - 1)];
-    S.set('checks/' + today, c);
+    S.set('checks/' + rday, c);
     toast('„' + t.label + '“ ist jetzt bei ' + byId[to].name);
   };
   useEffect(() => {
@@ -987,15 +1047,14 @@ function Heute({ now }){
     p.timer = setTimeout(() => { p.active = true; try { navigator.vibrate && navigator.vibrate(30); } catch (x) {}
       const d = { mid, i, t, x: p.x, y: p.y, over: mid }; dragRef.current = d; setDrag(d); }, 450);
     press.current = p; };
-  const morning = mode === 'morgen';
+  const greet = { morgen:'Guten Morgen! Los geht’s.', mittag:'Mahlzeit! Was steht heute Nachmittag an?', abend:'Guten Abend! Zeit zum Runterkommen.' }[slot.id];
   return html`
     <div class="head">
       <div><h1>${now.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}</h1>
-        <div class="sub">${morning ? 'Guten Morgen! Los geht’s.' : 'Guten Abend! Zeit zum Runterkommen.'}</div></div>
+        <div class="sub">${greet}</div></div>
       <div class="row" style="gap:16px">
         <div class="seg" role="group" aria-label="Tageszeit">
-          <button type="button" aria-pressed=${morning} onClick=${() => setMode('morgen')}><${Icon} n="sun" size=${22} />Morgen</button>
-          <button type="button" aria-pressed=${!morning} onClick=${() => setMode('abend')}><${Icon} n="moon" size=${22} />Abend</button>
+          ${SLOTS.map(x => html`<button type="button" aria-pressed=${mode === x.id} onClick=${() => setMode(x.id)} style=${slotIdx(x.id) < slotIdx(slot.id) && mode !== x.id ? 'opacity:.55' : ''}><${Icon} n=${x.icon} size=${22} />${x.name}</button>`)}
         </div>
         <button type="button" class=${'btn small ' + (edit ? '' : 'ghost')} onClick=${() => setEdit(!edit)} aria-pressed=${edit}><${Icon} n="edit" size=${18} />${edit ? 'Fertig' : 'Bearbeiten'}</button>
         <div class="clock" aria-label="Uhrzeit">${pad(now.getHours())}:${pad(now.getMinutes())}</div>
@@ -1008,24 +1067,37 @@ function Heute({ now }){
       ${soonExams.map(x => html`<span class="tchip exam">${countdown(daysUntil(x.datum, now))}: ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span>`)}
     </a>` : null}
     <${Todos} today=${today} />
+    ${locked ? html`<div class="hint warn" role="status">${past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei. Du siehst, was erledigt wurde – abhaken geht nicht mehr.' : 'Vorschau: ' + SLOTS[slotIdx(mode)].name + '-Aufgaben kann man ab ' + SLOTS[slotIdx(mode)].from + ' Uhr abhaken.'} <a href="#" onClick=${e => { e.preventDefault(); setMode(slot.id); }} style="color:inherit">Zurück zu jetzt</a></div>` : null}
     ${edit ? html`<div class="hint">Tipp: Eine Aufgabe lange gedrückt halten und zu einer anderen Person ziehen, um sie zu verschieben.</div>` : null}
     ${routines === undefined ? html`<div class="loading">Routinen werden geladen …</div>` : html`
     <div class="cols">
       ${MEMBERS.map(m => {
         const list = (r[mode] && r[mode][m.id]) || [];
-        const n = list.filter((t,i) => checks && checks[m.id + '-' + mode + '-' + i]).length;
-        const all = list.length > 0 && n === list.length;
+        const pts = ptasks.filter(t => t.who === m.id && (t.done ? t.doneOn === today : t.date <= today)).sort((a, b) => a.date.localeCompare(b.date));
+        const n = list.filter((t,i) => checks && checks[m.id + '-' + mode + '-' + i]).length + pts.filter(t => t.done).length;
+        const tot = list.length + pts.length;
+        const all = tot > 0 && n === tot;
         return html`<section class=${'col' + (drag && drag.over === m.id && drag.mid !== m.id ? ' dropover' : '')} data-mid=${m.id} aria-label=${m.name}>
           <div class="colhead">
             <span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${m.name[0]}</span>
             <div style="min-width:0"><div class="colname">${m.name}</div>
               ${m.kid ? html`<div class="stars"><${Star} />${fmtS((points && points[m.id]) || 0)} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}${points && points[m.id] ? html` · <${Star} size=${14} />${fmtS(points[m.id])}` : null}</div>`}</div>
+            <button type="button" class="addbtn" aria-label=${'Aufgabe für ' + m.name + ' hinzufügen'} title="Aufgabe hinzufügen" onClick=${() => setAddFor(m.id)}><${Icon} n="plus" size=${22} /></button>
           </div>
+          ${pts.map(t => { const d = !!t.done; const late = !d && t.date < today;
+            return html`<div style="display:flex;gap:6px;align-items:center">
+              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${() => togglePT(t)} style=${d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed'}>
+                <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon || 'star'} size=${28} color=${mc(m.id)} /></span>
+                <span class="lbl">${t.label}<span class="when" style=${late ? 'color:var(--warn-ink)' : ''}>${late ? 'seit ' + WD[fromIso(t.date).getDay()] + ' ' + dm(fromIso(t.date)) : 'nur heute'}</span></span>
+                <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
+              </button>
+              ${edit ? html`<button type="button" class="iconbtn" aria-label=${t.label + ' löschen'} onClick=${() => S.del('ptasks/' + t.id)}><${Icon} n="x" size=${18} /></button>` : null}
+            </div>`; })}
           ${list.map((t, i) => { const d = !!(checks && checks[m.id + '-' + mode + '-' + i]);
             return html`<div style="display:flex;gap:6px;align-items:center">
               <button type="button" class=${'task' + (drag && drag.mid === m.id && drag.i === i ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')}
                 onPointerDown=${e => startPress(e, m.id, i, t)} onContextMenu=${e => e.preventDefault()} onClick=${() => { if (skipClick.current) return; toggle(m.id, i); }}
-                style=${d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : ''}>
+                style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : '') + (locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon} size=${28} color=${mc(m.id)} /></span>
                 <span class="lbl">${t.label}</span>
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
@@ -1033,16 +1105,45 @@ function Heute({ now }){
               ${edit ? html`<button type="button" class="iconbtn" aria-label=${t.label + ' entfernen'} onClick=${() => setList(m.id, list.filter((x,j) => j !== i))}><${Icon} n="x" size=${18} /></button>` : null}
             </div>`; })}
           ${edit ? html`<${AddTask} onAdd=${t => setList(m.id, list.concat([t]))} />` : null}
-          ${!list.length && !edit ? html`<div class="sub" style="font-size:14px">Keine Aufgaben. Über „Bearbeiten“ hinzufügen.</div>` : null}
+          ${!list.length && !pts.length && !edit ? html`<div class="sub" style="font-size:14px">Keine Aufgaben. Mit + hinzufügen.</div>` : null}
           <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:4px">
             ${all ? html`<div class="done-badge" style=${'background:' + mt(m.id)}><${Star} size=${20} />Geschafft!</div>` : null}
-            <div class="progress" role="progressbar" aria-label=${'Fortschritt ' + m.name} aria-valuemin="0" aria-valuemax=${list.length} aria-valuenow=${n}><div style=${'width:' + (list.length ? Math.round(n/list.length*100) : 0) + '%;background:' + mc(m.id)}></div></div>
-            <div class="sub" style="font-size:13px;font-weight:700">${n} von ${list.length} erledigt</div>
+            <div class="progress" role="progressbar" aria-label=${'Fortschritt ' + m.name} aria-valuemin="0" aria-valuemax=${tot} aria-valuenow=${n}><div style=${'width:' + (tot ? Math.round(n/tot*100) : 0) + '%;background:' + mc(m.id)}></div></div>
+            <div class="sub" style="font-size:13px;font-weight:700">${n} von ${tot} erledigt</div>
           </div>
         </section>`;
       })}
     </div>`}
+    ${addFor ? html`<${PersonTaskForm} mid=${addFor} mode0=${mode} r=${r} onClose=${() => setAddFor(null)} />` : null}
     ${drag ? html`<div class="dragghost" style=${'left:' + drag.x + 'px;top:' + drag.y + 'px'} aria-hidden="true"><${Icon} n=${drag.t.icon} size=${24} color=${mc(drag.mid)} />${drag.t.label}${drag.over && drag.over !== drag.mid ? ' → ' + byId[drag.over].name : ''}</div>` : null}`;
+}
+function PersonTaskForm({ mid, mode0, r, onClose }){
+  const [label, setLabel] = useState(''); const [icon, setIcon] = useState('star');
+  const [when, setWhen] = useState('routine'); const [md, setMd] = useState(mode0);
+  const [date, setDate] = useState(iso(new Date()));
+  const name = byId[mid].name;
+  const save = e => { e.preventDefault(); const l = label.trim(); if (!l) return;
+    if (when === 'routine') { const next = copyR(r);
+      next[md][mid] = ((next[md] || {})[mid] || []).concat([{ label: l, icon }]); S.set('config/routines', next);
+      toast('„' + l + '“ steht jetzt jeden ' + SLOTS[slotIdx(md)].name + ' bei ' + name); }
+    else { S.add('ptasks', { who: mid, label: l, icon, date, done: false }); toast('„' + l + '“ für ' + name + ' am ' + fromIso(date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' }) + ' eingetragen'); }
+    onClose(); };
+  return html`<${Sheet} title=${'Neue Aufgabe für ' + name} onClose=${onClose}>
+    <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
+      <label class="field">Was?<input id="pt-label" value=${label} onInput=${e => setLabel(e.target.value)} placeholder="z. B. Zimmer aufräumen" /></label>
+      <div class="field">Symbol<div class="iconpick" role="group" aria-label="Symbol">${TASK_ICONS.map(k => html`<button type="button" aria-pressed=${icon === k} aria-label=${'Symbol ' + k} onClick=${() => setIcon(k)}><${Icon} n=${k} size=${20} /></button>`)}</div></div>
+      <div class="field">Wann?
+        <div class="seg" role="group" aria-label="Wann">
+          <button type="button" aria-pressed=${when === 'routine'} onClick=${() => setWhen('routine')}>Jeden Tag</button>
+          <button type="button" aria-pressed=${when === 'once'} onClick=${() => setWhen('once')}>An einem Tag</button>
+        </div></div>
+      ${when === 'routine' ? html`<div class="field">Zu welcher Routine?<div class="row" style="gap:6px">
+          ${SLOTS.map(x => html`<button type="button" class="chip" aria-pressed=${md === x.id} onClick=${() => setMd(x.id)}>${x.adv[0].toUpperCase() + x.adv.slice(1)}</button>`)}</div></div>`
+        : html`<${DateField} label="An welchem Tag?" value=${date} onChange=${setDate} />
+          <div class="sub" style="font-size:13px">Erscheint an diesem Tag bei ${name}. Wird sie nicht erledigt, bleibt sie stehen, bis sie abgehakt ist.</div>`}
+      <button class="btn" type="submit"><${Icon} n="plus" size=${20} />Hinzufügen</button>
+    </form>
+  <//>`;
 }
 function AddTask({ onAdd }){
   const [label, setLabel] = useState(''); const [icon, setIcon] = useState('star');
@@ -1066,6 +1167,7 @@ function Kalender({ now }){
   const visible = e => !hidden[e.who || 'familie'];
   const busesOn = useBuses();
   const todos = useCol('todos') || [];
+  const ptasks = useCol('ptasks') || [];
   return html`
     <div class="head">
       <div><h1>Kalender · KW ${kw(mon)}</h1><div class="sub">${dm(days[0])} – ${dm(days[6])}${days[6].getFullYear()}</div></div>
@@ -1094,6 +1196,8 @@ function Kalender({ now }){
             <span class="x">Bus · ${byId[b.kid].name}</span></button>`)}
           ${todos.filter(t => todoOn(t, ds, today)).map(t => { const ws = whoOf(t, ds); const w = ws[0]; return html`<button type="button" class="ev todoev" style=${w ? 'background:' + mt(w) : ''} onClick=${() => setSheet({ kind:'todo', t, ds })}>
             <span class="t">${w ? html`<span class="dot" style=${'background:' + mc(w)}></span>erledigt · ${names(ws)}` : 'Aufgabe für alle'}</span><span class="x">${t.title}</span></button>`; })}
+          ${ptasks.filter(t => t.date === ds && !hidden[t.who]).map(t => html`<button type="button" class="ev ptev" style=${'background:' + mt(t.who)} onClick=${() => setSheet({ kind:'pt', t })}>
+            <span class="t"><span class="dot" style=${'background:' + mc(t.who)}></span>${t.done ? 'erledigt' : 'Aufgabe'} · ${byId[t.who].name}</span><span class="x">${t.label}</span></button>`)}
           ${ex.map(x => html`<button type="button" class="ev exam" onClick=${() => { location.hash = 'schule'; }}><span class="t"><span class="dot" style=${'background:' + mc(x.kid)}></span>Schule</span><span class="x">Klassenarbeit ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span></button>`)}
           ${evs.map(e => html`<button type="button" class="ev" style=${'background:' + mt(e.who || 'familie')} onClick=${() => setSheet({ kind:'detail', ev: e })}>
             <span class="t"><span class="dot" style=${'background:' + mc(e.who || 'familie')}></span>${e.time ? e.time + (e.end ? '–' + e.end : '') : 'ganztags'}</span>
@@ -1106,9 +1210,14 @@ function Kalender({ now }){
     ${sheet && sheet.kind === 'add' ? html`<${EventForm} date=${sheet.date} onClose=${() => setSheet(null)} />` : null}
     ${sheet && sheet.kind === 'detail' ? html`<${EventDetail} ev=${sheet.ev} onClose=${() => setSheet(null)} />` : null}
     ${sheet && sheet.kind === 'shot' ? html`<${EventImport} now=${now} onClose=${() => setSheet(null)} />` : null}
+    ${sheet && sheet.kind === 'pt' ? html`<${Sheet} title=${sheet.t.label} onClose=${() => setSheet(null)}>
+      <div class="row"><${Avatar} id=${sheet.t.who} size=${40} /><div><b>${byId[sheet.t.who].name}</b><div class="sub" style="font-size:14px">${fromIso(sheet.t.date).toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })} · ${sheet.t.done ? 'erledigt' : 'offen'}</div></div></div>
+      <div class="sub" style="font-size:14px">Abhaken geht auf „Heute“ in der Spalte von ${byId[sheet.t.who].name}.</div>
+      <button type="button" class="btn ghost" onClick=${() => { S.del('ptasks/' + sheet.t.id); setSheet(null); toast('Aufgabe gelöscht'); }}>Aufgabe löschen</button>
+    <//>` : null}
     ${sheet && sheet.kind === 'todo' ? html`<${TodoClaim} t=${todos.find(x => x.id === sheet.t.id) || sheet.t} ds=${sheet.ds} onClose=${() => setSheet(null)} />` : null}`;
 }
-function EventForm({ date, onClose, kind0 }){
+function EventForm({ date, onClose, kind0, fixed }){
   const [kind, setKind] = useState(kind0 || 'event');
   const [f, setF] = useState({ title:'', date, time:'', end:'', who:'familie', repeat:'none', stars:1 });
   const up = (k, v) => setF(Object.assign({}, f, { [k]: v }));
@@ -1118,10 +1227,10 @@ function EventForm({ date, onClose, kind0 }){
     S.add('events', { title: f.title.trim(), date: f.date, time: f.time || null, end: f.end || null, who: f.who, source:'hand' }); onClose(); toast('Termin gespeichert'); };
   return html`<${Sheet} title=${todo ? 'Neue Aufgabe für alle' : 'Neuer Termin'} onClose=${onClose}>
     <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
-      <div class="seg" role="group" aria-label="Art">
+      ${fixed ? null : html`<div class="seg" role="group" aria-label="Art">
         <button type="button" aria-pressed=${!todo} onClick=${() => setKind('event')}><${Icon} n="cal" size=${20} />Termin</button>
         <button type="button" aria-pressed=${todo} onClick=${() => setKind('todo')}><${Icon} n="star" size=${20} />Aufgabe für alle</button>
-      </div>
+      </div>`}
       ${todo ? html`<div class="sub" style="font-size:14px">Gehört niemandem fest. Wer sie erledigt, tippt sich ein und bekommt die Sterne.</div>` : null}
       <label class="field">Was?<input id="ev-title" value=${f.title} onInput=${e => up('title', e.target.value)} placeholder=${todo ? 'z. B. Müll rausbringen' : 'z. B. Elternabend'} /></label>
       <div class="row" style="align-items:flex-start">
@@ -1536,6 +1645,7 @@ function Sterne({ now }){
   const [sel, setSel] = useState('dorothea');
   const [edit, setEdit] = useState(false);
   const [open, setOpen] = useState(null);
+  useEffect(() => { dbReady.then(() => { try { backfillLog(); } catch (e) { console.error(e); } }); }, []);
   const P = points || {}, W = week || {}, C = claims || {}, R = custom || {};
   const rw = l => ((R.levels || {})[l.at]) || l.reward;
   const fr = g => ((R.family || {})[g.at]) || g.reward;
@@ -1565,7 +1675,7 @@ function Sterne({ now }){
         <div class="lb">${ranked.map((m, i) => { const tp = P[m.id] || 0; const li = levelIdx(tp); const nx = LEVELS[li + 1];
           const pct = nx ? Math.round((tp - LEVELS[li].at) / (nx.at - LEVELS[li].at) * 100) : 100;
           return html`<div class="lbrow" aria-pressed=${sel === m.id}><div class="lbtop">
-            <button type="button" class="lbmain" onClick=${() => setSel(m.id)} aria-label=${'Platz ' + ranks[i] + ': ' + m.name + ', ' + fmtS(val(m.id)) + ' Sterne, Belohnungen zeigen'}>
+            <button type="button" class="lbmain" aria-expanded=${open === m.id} onClick=${() => { setSel(m.id); setOpen(open === m.id ? null : m.id); }} aria-label=${'Platz ' + ranks[i] + ': ' + m.name + ', ' + fmtS(val(m.id)) + ' Sterne, Erledigtes ' + (open === m.id ? 'zuklappen' : 'zeigen')}>
             <span class=${'rank' + (val(m.id) > 0 && ranks[i] <= 3 ? ' r' + ranks[i] : '')}>${ranks[i]}</span>
             <${Avatar} id=${m.id} size=${52} ring=${true} />
             <span class="lbx">
@@ -1574,8 +1684,8 @@ function Sterne({ now }){
               <span class="lbnext">${nx ? 'Noch ' + fmtS(nx.at - tp) + ' bis Level ' + (li + 2) + ': ' + rw(nx) : 'Höchstes Level erreicht!'}</span>
             </span>
             </button>
-            <button type="button" class="lbs" aria-expanded=${open === m.id} aria-label=${'Statistik von ' + m.name + (open === m.id ? ' schließen' : ' zeigen')} onClick=${() => setOpen(open === m.id ? null : m.id)}>
-              <${Star} size=${28} />${fmtS(val(m.id))}<span class="chev"><${Icon} n="right" size=${18} sw=${2.5} /></span></button></div>
+            <button type="button" class="lbs" aria-expanded=${open === m.id} aria-label=${'Statistik von ' + m.name + (open === m.id ? ' schließen' : ' zeigen')} onClick=${() => { setSel(m.id); setOpen(open === m.id ? null : m.id); }}>
+              <span style="display:flex;flex-direction:column;align-items:center;line-height:1"><span style="display:flex;align-items:center;gap:6px"><${Star} size=${28} />${fmtS(val(m.id))}</span><small style="font-size:11px;font-weight:800;color:var(--muted);margin-top:3px">Erledigtes</small></span><span class="chev"><${Icon} n="right" size=${18} sw=${2.5} /></span></button></div>
             ${open === m.id ? html`<${StarStats} id=${m.id} now=${now} points=${points} week=${W} />` : null}
           </div>`; })}</div>
         <div class="card">
@@ -1625,16 +1735,16 @@ function StarStats({ id, now, points, week }){
     <div class="days" aria-label="Sterne der letzten 7 Tage">${days.map(x => html`<div class="dc"><span class="dv">${x.v ? fmtS(x.v) : ''}</span>
       <span class="bar" style=${'height:' + Math.round(x.v / mx * 70) + 'px;background:' + (x.v ? mc(id) : 'var(--line)')}></span><span>${WD[x.d.getDay()]}</span></div>`)}</div>
     ${top.length ? html`<div class="field">Am häufigsten erledigt<div class="top">${top.map(w => html`<span>${w} · ${cnt[w]}×</span>`)}</div></div>` : null}
-    <div class="field">Verlauf – falsch eingetragen? Andere Person wählen oder löschen.
+    <div class="field">Was wurde erledigt? Falsch eingetragen → „Ändern“ (andere Person) oder „Abwählen“.
       ${mine.length ? html`<div class="list">${shown.map(e => html`<div class="logli">
-        <span class="lt"><b>${e.what}</b><span>${fromIso(e.date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' })} · ${e.kind === 'todo' ? 'Aufgabe für alle' + (e.team ? ' (mit ' + names(e.team.filter(x => x !== id)) + ')' : '') : 'Routine ' + (e.mode === 'abend' ? 'abends' : 'morgens')}</span></span>
-        <span class="ls"><${Star} size=${16} />+${fmtS(e.stars)}</span>
-        ${fix === e.id ? html`<div class="row" style="gap:6px;width:100%">${MEMBERS.filter(m => m.id !== id).map(m => html`<button type="button" class="chip" onClick=${() => { logFix(e, m.id, points); setFix(null); }}>${m.name}</button>`)}<button type="button" class="chip" onClick=${() => setFix(null)}>Abbrechen</button></div>`
-          : del === e.id ? html`<div class="row" style="gap:6px"><span style="font-weight:800;font-size:14px">Sterne abziehen?</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => { logFix(e, null, points); setDel(null); }}>Löschen</button><button type="button" class="btn small ghost" onClick=${() => setDel(null)}>Nein</button></div>`
-          : html`<button type="button" class="btn small ghost" onClick=${() => { setFix(e.id); setDel(null); }}>Andere Person</button><button type="button" class="iconbtn" aria-label=${e.what + ' löschen'} onClick=${() => { setDel(e.id); setFix(null); }}><${Icon} n="x" size=${18} /></button>`}
+        <span class="lt"><b>${e.what}</b><span>${fromIso(e.date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' })} · ${e.kind === 'todo' ? 'Aufgabe für alle' + (e.team ? ' (mit ' + names(e.team.filter(x => x !== id)) + ')' : '') : e.kind === 'ptask' ? 'Einzelaufgabe' : 'Routine ' + (SLOTS[slotIdx(e.mode || 'morgen')] || SLOTS[0]).adv}</span></span>
+        <span class="ls">${e.stars ? html`<${Star} size=${16} />+${fmtS(e.stars)}` : html`<span style="font-size:12px;color:var(--muted)">ohne Stern</span>`}</span>
+        ${fix === e.id ? html`<div class="row" style="gap:6px;width:100%"><span style="font-weight:800;font-size:14px">Wer hat es wirklich gemacht?</span>${MEMBERS.filter(m => m.id !== id).map(m => html`<button type="button" class="chip" onClick=${() => { logFix(e, m.id, points); setFix(null); }}>${m.name}</button>`)}<button type="button" class="chip" onClick=${() => setFix(null)}>Abbrechen</button></div>`
+          : del === e.id ? html`<div class="row" style="gap:6px"><span style="font-weight:800;font-size:14px">Wirklich abwählen? Die Sterne werden abgezogen.</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => { logFix(e, null, points); setDel(null); }}>Abwählen</button><button type="button" class="btn small ghost" onClick=${() => setDel(null)}>Nein</button></div>`
+          : html`<button type="button" class="btn small ghost" onClick=${() => { setFix(e.id); setDel(null); }}>Ändern</button><button type="button" class="btn small ghost" style="color:var(--danger)" onClick=${() => { setDel(e.id); setFix(null); }}><${Icon} n="x" size=${16} />Abwählen</button>`}
       </div>`)}</div>
       ${mine.length > 12 ? html`<button type="button" class="btn small ghost" onClick=${() => setMore(!more)}>${more ? 'Weniger anzeigen' : 'Alle ' + mine.length + ' anzeigen'}</button>` : null}`
-      : html`<div class="sub" style="font-size:14px">Noch nichts erfasst. Die Statistik startet mit diesem Update – ab jetzt wird jede erledigte Aufgabe hier aufgelistet.</div>`}
+      : html`<div class="sub" style="font-size:14px">Noch nichts erledigt.</div>`}
     </div>
   </div>`;
 }
