@@ -403,7 +403,7 @@ const MEMBERS = [
   { id:'marlene', name:'Marlene', kid:true, school:true },
   { id:'clemens', name:'Clemens', kid:true }
 ];
-const WHO = MEMBERS.concat([{ id:'familie', name:'Familie' }]);
+const WHO = MEMBERS.concat([{ id:'familie', name:'Alle' }]);
 const byId = {}; WHO.forEach(m => byId[m.id] = m);
 const mc = id => 'var(--m-' + id + ')';
 const mt = id => 'var(--t-' + id + ')';
@@ -625,6 +625,7 @@ function todoOn(t, ds, today){
     const due = nextDue(L, t.every, t.date) || today; if (ds === today) return ds >= due; if (ds < today) return false; return ds === (due < today ? today : due); }
   if (t.repeat === 'daily') return !t.date || ds >= t.date;
   if (t.repeat === 'weekly') return !!t.date && ds >= t.date && fromIso(t.date).getDay() === fromIso(ds).getDay();
+  if (t.slot && !isRep(t)) return t.date === ds;
   if (ds === today) return t.done && t.done.once ? t.doneOn === today : (!t.date || t.date <= today) && (!t.until || today <= t.until);
   return t.date === ds;
 }
@@ -1014,7 +1015,7 @@ function WhoPicker({ value, onChange, list = MEMBERS, label = 'Person' }){
   return html`<div class="row" role="group" aria-label=${label} style="gap:8px">
     ${list.map(m => html`<button type="button" class="avatar avatar-btn" aria-pressed=${value === m.id} aria-label=${m.name} title=${m.name}
       style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (value === m.id ? mc(m.id) : 'transparent')}
-      onClick=${() => onChange(m.id)}>${m.id === 'familie' ? 'F' : m.name[0]}</button>`)}
+      onClick=${() => onChange(m.id)}>${m.id === 'familie' ? 'A' : m.name[0]}</button>`)}
   </div>`;
 }
 function Sheet({ title, onClose, children, wide }){
@@ -1122,7 +1123,8 @@ function TypePreview(){
 function Todos({ today }){
   const todos = useCol('todos') || [];
   const [sel, setSel] = useState(null); const [add, setAdd] = useState(false); const [voice, setVoice] = useState(null);
-  const list = todos.filter(t => todoOn(t, today, today)).sort((a, b) => (whoOf(a, today).length > 0) - (whoOf(b, today).length > 0) || (a.title || '').localeCompare(b.title || ''));
+  const curSlot = slotOf(new Date()).id;
+  const list = todos.filter(t => todoOn(t, today, today) && (!t.slot || t.slot === curSlot)).sort((a, b) => (whoOf(a, today).length > 0) - (whoOf(b, today).length > 0) || (a.title || '').localeCompare(b.title || ''));
   return html`<section class="card" aria-label="Aufgaben für alle" style="padding:14px 18px">
     <div class="row" style="justify-content:space-between"><h2 style="font-size:19px">Aufgaben für alle <span class="sub" style="font-size:14px">· wer’s macht, bekommt die Sterne</span></h2>
       <div class="row" style="gap:8px"><${VoiceAdd} onResult=${v => setVoice(v)} />
@@ -1133,7 +1135,7 @@ function Todos({ today }){
         aria-label=${t.title + (who ? ', erledigt von ' + names(ws) : ', offen')}>
         ${who ? html`<span style="display:flex">${ws.map((w, i) => html`<span style=${i ? 'margin-left:-12px' : ''}><${Avatar} id=${w} size=${36} ring=${true} /></span>`)}</span>` : html`<span class="tb"></span>`}
         <span style="display:flex;flex-direction:column;gap:2px"><span>${t.title}${t.lockedBy && byId[t.lockedBy] ? html`<span class="lockmini" title=${'reserviert für ' + byId[t.lockedBy].name}><${Icon} n="lock" size=${14} /></span>` : null}</span>
-          <span class="ts">${who ? 'erledigt von ' + names(ws) : t.lockedBy && byId[t.lockedBy] ? 'reserviert für ' + byId[t.lockedBy].name + ' · ' : ''}${who ? '' : Array.from({ length: t.stars || 1 }, () => html`<${Star} size=${14} />`)}${t.repeat === 'weekly' ? ' · jede Woche' : t.repeat === 'daily' ? ' · jeden Tag' : t.repeat === 'interval' ? ' · ' + everyTxt(t.every || 4) : ''}</span></span>
+          <span class="ts">${who ? 'erledigt von ' + names(ws) : t.lockedBy && byId[t.lockedBy] ? 'reserviert für ' + byId[t.lockedBy].name + ' · ' : ''}${who ? '' : Array.from({ length: t.stars || 1 }, () => html`<${Star} size=${14} />`)}${t.repeat === 'weekly' ? ' · jede Woche' : t.repeat === 'daily' ? ' · jeden Tag' : t.repeat === 'interval' ? ' · ' + everyTxt(t.every || 4) : ''}${t.slot ? ' · ' + SLOTS[slotIdx(t.slot)].adv : ''}</span></span>
       </button>`; })}</div>` : html`<div class="sub" style="font-size:14px">Gerade nichts offen.</div>`}
   </section>
   ${sel ? html`<${TodoClaim} t=${sel} ds=${today} onClose=${() => setSel(null)} />` : null}
@@ -1227,7 +1229,9 @@ function TodoClaim({ t, ds, onClose }){
   const flip = id => setPick(pick.indexOf(id) >= 0 ? pick.filter(x => x !== id) : pick.concat([id]));
   const same = pick.length === prev.length && pick.every(x => prev.indexOf(x) >= 0);
   const res = t.lockedBy && byId[t.lockedBy] ? t.lockedBy : null;
-  const save = async () => { if (same) { onClose(); return; } if (points === undefined) { toast('Einen Moment, Sterne werden noch geladen …'); return; }
+  const save = async () => { if (same) { onClose(); return; }
+    if (t.slot && (t.slot !== slotOf(new Date()).id || ds !== iso(new Date()))) { toast('Das geht nur ' + SLOTS[slotIdx(t.slot)].adv + ' – danach kann es nicht mehr nachträglich abgehakt werden.'); return; }
+    if (points === undefined) { toast('Einen Moment, Sterne werden noch geladen …'); return; }
     if (res && !(pick.length === 1 && pick[0] === res) && !(await needPin(res, 'Reserviert für ' + byId[res].name + ' – zum Ändern PIN von ' + byId[res].name))) return;
     for (const w of pick.concat(prev).filter((x, i, a) => a.indexOf(x) === i)) { if (pinAll(w) && !(await needPin(w, 'Bestätigen für ' + byId[w].name))) return; }
     const fresh = Object.assign({ id: t.id }, mem_.docs['todos/' + t.id] || t);
@@ -1535,7 +1539,7 @@ function Kalender({ now }){
     <div class="row" role="group" aria-label="Personen ein- und ausblenden" style="gap:8px">
       ${WHO.map(m => html`<button type="button" class="avatar avatar-btn" aria-pressed=${!hidden[m.id]} aria-label=${m.name + (hidden[m.id] ? ' einblenden' : ' ausblenden')} title=${m.name}
         style=${'width:44px;height:44px;font-size:17px;background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + mc(m.id) + ';opacity:' + (hidden[m.id] ? .35 : 1)}
-        onClick=${() => setHidden(Object.assign({}, hidden, { [m.id]: !hidden[m.id] }))}>${m.id === 'familie' ? 'F' : m.name[0]}</button>`)}
+        onClick=${() => setHidden(Object.assign({}, hidden, { [m.id]: !hidden[m.id] }))}>${m.id === 'familie' ? 'A' : m.name[0]}</button>`)}
     </div>
     ${events === undefined ? html`<div class="loading">Termine werden geladen …</div>` : html`
     <div class="week week3">
@@ -1548,7 +1552,7 @@ function Kalender({ now }){
             <span class="t"><span class="dot" style=${'background:' + mc(b.kid)}></span>${b.dep}${b.arr ? '–' + b.arr : ''}</span>
             <span class="x">${b.car ? 'Ohne Bus' : 'Bus'} · ${byId[b.kid].name}</span></button>`)}
           ${todos.filter(t => todoOn(t, ds, today)).map(t => { const ws = whoOf(t, ds); const w = ws[0]; return html`<button type="button" class="ev todoev" style=${w ? 'background:' + mt(w) : ''} onClick=${() => setSheet({ kind:'todo', t, ds })}>
-            <span class="t">${w ? html`<span class="dot" style=${'background:' + mc(w)}></span>erledigt · ${names(ws)}` : 'Aufgabe für alle'}</span><span class="x">${t.title}</span></button>`; })}
+            <span class="t">${w ? html`<span class="dot" style=${'background:' + mc(w)}></span>erledigt · ${names(ws)}` : 'Aufgabe für alle'}${t.slot ? ' · ' + SLOTS[slotIdx(t.slot)].adv : ''}</span><span class="x">${t.title}</span></button>`; })}
           ${ptasks.filter(t => !hidden[t.who] && (t.every ? (t.lastDone === ds || (ds >= today && ds === (nextDue(t.lastDone, t.every, t.date) < today ? today : nextDue(t.lastDone, t.every, t.date))) ) : t.date === ds)).map(t => html`<button type="button" class="ev ptev" style=${'background:' + mt(t.who)} onClick=${() => setSheet({ kind:'pt', t })}>
             <span class="t"><span class="dot" style=${'background:' + mc(t.who)}></span>${t.every ? (t.lastDone === ds ? 'erledigt' : everyTxt(t.every)) : t.done ? 'erledigt' : 'Aufgabe'}${t.slot ? ' ' + SLOTS[slotIdx(t.slot)].adv : ''} · ${byId[t.who].name}</span><span class="x">${t.label}</span></button>`)}
           ${ex.map(x => html`<button type="button" class="ev exam" onClick=${() => { location.hash = 'schule'; }}><span class="t"><span class="dot" style=${'background:' + mc(x.kid)}></span>Schule</span><span class="x">Klassenarbeit ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span></button>`)}
@@ -1578,7 +1582,8 @@ function EventForm({ date, onClose, kind0, fixed, init }){
   const up = (k, v) => setF(Object.assign({}, f, { [k]: v }));
   const todo = kind === 'todo';
   const save = e => { e.preventDefault(); if (!f.title.trim() || !f.date) return;
-    if (todo) { S.add('todos', Object.assign({ title: f.title.trim(), date: f.date, repeat: f.repeat, stars: f.stars, done: {} }, f.repeat === 'interval' ? { every: f.every || 4 } : {})); onClose(); toast('Aufgabe für alle eingetragen'); return; }
+    if (todo) { const sl = f.tslots && f.tslots.length ? f.tslots : [null];
+      sl.forEach(x => S.add('todos', Object.assign({ title: f.title.trim(), date: f.date, repeat: f.repeat, stars: f.stars, done: {} }, f.repeat === 'interval' ? { every: f.every || 4 } : {}, x ? { slot: x } : {}))); onClose(); toast('Aufgabe für alle eingetragen'); return; }
     const rk = f.evrep || ''; const recur = rk ? (rk[0] === 'w' ? { rep: 'w', every: +rk.slice(1) } : { rep: rk }) : {};
     S.add('events', Object.assign({ title: f.title.trim(), date: f.date, time: f.time || null, end: f.end || null, who: f.who, source:'hand' }, recur, rk && f.until ? { until: f.until } : {}));
     onClose(); toast(rk ? 'Termin gespeichert · ' + (EV_REPS.find(r => r[0] === rk) || ['', ''])[1] : 'Termin gespeichert'); };
@@ -1599,6 +1604,10 @@ function EventForm({ date, onClose, kind0, fixed, init }){
       </div>
       ${todo ? html`<div class="field">Wiederholen?<div class="row" style="gap:6px">${REPEATS.map(r => html`<button type="button" class="chip" aria-pressed=${f.repeat === r[0]} onClick=${() => up('repeat', r[0])}>${r[1]}${r[0] === 'weekly' ? ' (' + WD[fromIso(f.date).getDay()] + ')' : ''}</button>`)}</div></div>
         ${todo && f.repeat === 'interval' ? html`<div class="field">Wie oft? (zählt ab dem letzten Erledigen)<div class="row" style="gap:6px">${EVERY.map(n => html`<button type="button" class="chip" aria-pressed=${(f.every || 4) === n} onClick=${() => up('every', n)}>${everyTxt(n)}</button>`)}</div></div>` : null}
+        ${f.repeat === 'interval' ? null : html`<div class="field">Wann am Tag? (mehrere antippen möglich)<div class="row" style="gap:6px">
+          <button type="button" class="chip" aria-pressed=${!(f.tslots && f.tslots.length)} onClick=${() => up('tslots', [])}>Ganzer Tag</button>
+          ${SLOTS.map(x => { const on = (f.tslots || []).indexOf(x.id) >= 0; return html`<button type="button" class="chip" aria-pressed=${on} onClick=${() => up('tslots', on ? (f.tslots || []).filter(y => y !== x.id) : (f.tslots || []).concat([x.id]))}>${x.adv[0].toUpperCase() + x.adv.slice(1)} (${x.from}${x.id === 'abend' ? '' : '–' + SLOTS[slotIdx(x.id) + 1].from} Uhr)</button>`; })}</div>
+          ${f.tslots && f.tslots.length ? html`<div class="sub" style="font-size:13px;font-weight:600">Erscheint nur im gewählten Zeitraum. Danach fällt sie raus und kann nicht mehr nachträglich abgehakt werden.</div>` : null}</div>`}
         <div class="field">Wie viele Sterne?<div class="row" style="gap:6px">${[1,2,3].map(n => html`<button type="button" class="chip" aria-pressed=${f.stars === n} onClick=${() => up('stars', n)} aria-label=${n + ' Sterne'}>${Array.from({ length: n }, () => html`<${Star} size=${16} />`)}</button>`)}</div></div>`
       : html`<div class="field">Wiederholen?<div class="row" style="gap:6px">${EV_REPS.map(r => html`<button type="button" class="chip" aria-pressed=${(f.evrep || '') === r[0]} onClick=${() => up('evrep', r[0])}>${r[1]}</button>`)}</div></div>
         ${f.evrep ? html`<div class="field">Bis wann? <div class="row" style="gap:6px"><button type="button" class="chip" aria-pressed=${!f.until} onClick=${() => up('until', '')}>Ohne Ende</button><button type="button" class="chip" aria-pressed=${!!f.until} onClick=${() => up('until', f.until || iso(addDays(fromIso(f.date), 90)))}>Enddatum wählen</button></div></div>
