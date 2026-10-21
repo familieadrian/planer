@@ -388,6 +388,13 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 .flystar{position:fixed;z-index:300;pointer-events:none;display:flex;align-items:center;gap:2px;filter:drop-shadow(0 4px 10px rgba(242,169,59,.6))}
 .flystar b{font-size:16px;font-weight:900;color:#C9821A}
 [data-star]{display:inline-flex;transform-origin:left center}
+/* Stundenplan: Zeitbalken – Vergangenes wird grau */
+.cell{overflow:hidden}
+.cell.pastcell{background:var(--surface-2)!important;color:var(--muted);filter:grayscale(1);opacity:.6}
+.pastov{position:absolute;left:0;right:0;top:0;background:rgba(110,116,128,.55);border-bottom:3px solid var(--danger);pointer-events:none;transition:height .6s linear}
+.pausecell{position:relative;overflow:hidden;min-height:22px;border-radius:10px;background:var(--surface-2);color:var(--muted);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.pausecell.pastcell{opacity:.45}
+.tt .tm.pausetm small{font-size:10px;line-height:1.1;text-align:center}
 </style>
 
 </head>
@@ -614,6 +621,8 @@ function evOn(e, ds){
   if (e.rep === 'y') return a.getDate() === b.getDate() && a.getMonth() === b.getMonth();
   return false;
 }
+const hm2 = n => n == null ? '' : Math.floor(n / 60) + ':' + pad(Math.round(n % 60));
+const lessonEnd = (tt, ri) => { const e = tt.ends && tt.ends[ri] ? toMin(tt.ends[ri]) : null; if (e != null) return e; const a = toMin(tt.times[ri]); return a == null ? null : a + 45; };
 const daysTxt = ds => { const k = ds.slice().sort().join(''); return k === '12345' ? 'Mo–Fr' : k === '06' ? 'Sa & So' : ds.slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map(d => WD[d]).join(', '); };
 const everyTxt = n => n === 1 ? 'jede Woche' : 'alle ' + n + ' Wochen';
 const isRep = t => t.repeat === 'weekly' || t.repeat === 'daily' || t.repeat === 'interval';
@@ -1802,16 +1811,28 @@ function Schule({ now }){
             <div class="row" style="justify-content:center"><button type="button" class="btn" onClick=${() => setSheet({ kind:'shot' })}><${Icon} n="camera" size=${20} />Screenshot einlesen</button>
             <button type="button" class="btn ghost" onClick=${blank}>Selbst eintragen</button></div></div></div>` : html`
           <div class="card">
-            <div class="ovx"><div class="tt" style=${'grid-template-columns:64px repeat(5,minmax(96px,1fr));min-width:560px'}>
+            <div class="ovx"><div class="tt" style=${'grid-template-columns:88px repeat(5,minmax(90px,1fr));min-width:560px'}>
               <div></div>
               ${days.map(d => html`<div class=${'h' + (iso(d) === today ? ' today' : '')}><span style="font-size:17px">${WD[d.getDay()]}</span><span style="font-size:14px">${dm(d)}</span></div>`)}
-              ${tt.times.map((time, ri) => html`
-                <div class="tm"><span>${ri+1}.</span><small>${time}</small></div>
-                ${days.map((d, di) => { const f = (tt.days[di] || [])[ri];
-                  const ex = f && kidExams.some(x => x.datum === iso(d) && x.fach.toLowerCase() === f.toLowerCase());
-                  return html`<button type="button" class=${'cell' + (f ? '' : ' empty-cell') + (ex ? ' exam' : '')} style=${f ? 'background:var(--tone-' + toneOf(f) + ')' : ''}
-                    onClick=${() => setSheet({ kind:'cell', di, ri, f: f || '' })} aria-label=${WD[d.getDay()] + ' ' + (ri+1) + '. Stunde: ' + (f || 'frei')}>
-                    ${f || '–'}${ex ? html`<span class="badge">Arbeit</span>` : null}</button>`; })}`)}
+              ${(() => { const nowM = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60; const todayS = iso(now);
+                const frac = (d, a, b) => { const ds = iso(d); if (ds < todayS) return 1; if (ds > todayS || a == null || b == null) return 0; return Math.max(0, Math.min(1, (nowM - a) / Math.max(1, b - a))); };
+                const ov = (fr, isToday) => fr <= 0 ? null : fr >= 1 ? null : html`<span class="pastov" style=${'height:' + Math.round(fr * 100) + '%'}></span>`;
+                const out = [];
+                tt.times.forEach((time, ri) => {
+                  const a = toMin(time), b = lessonEnd(tt, ri);
+                  out.push(html`<div class="tm"><span>${ri+1}.</span><small>${time}${b != null ? '–' + hm2(b) : ''}</small></div>`);
+                  days.forEach((d, di) => { const f = (tt.days[di] || [])[ri]; const fr = frac(d, a, b);
+                    const ex = f && kidExams.some(x => x.datum === iso(d) && x.fach.toLowerCase() === f.toLowerCase());
+                    out.push(html`<button type="button" class=${'cell' + (f ? '' : ' empty-cell') + (ex ? ' exam' : '') + (fr >= 1 ? ' pastcell' : '')} style=${f ? 'background:var(--tone-' + toneOf(f) + ')' : ''}
+                      onClick=${() => setSheet({ kind:'cell', di, ri, f: f || '' })} aria-label=${WD[d.getDay()] + ' ' + (ri+1) + '. Stunde: ' + (f || 'frei') + (fr >= 1 ? ', vorbei' : fr > 0 ? ', läuft gerade' : '')}>
+                      ${ov(fr)}<span style="position:relative">${f || '–'}</span>${ex ? html`<span class="badge">Arbeit</span>` : null}</button>`); });
+                  const na = ri + 1 < tt.times.length ? toMin(tt.times[ri + 1]) : null;
+                  if (b != null && na != null && na - b >= 5) {
+                    out.push(html`<div class="tm pausetm"><small>Pause ${hm2(b)}–${hm2(na)}</small></div>`);
+                    days.forEach(d => { const fr = frac(d, b, na); out.push(html`<div class=${'pausecell' + (fr >= 1 ? ' pastcell' : '')}>${ov(fr)}<span style="position:relative">Pause</span></div>`); });
+                  }
+                });
+                return out; })()}
             </div></div>
             <div class="row" style="justify-content:space-between">
               <span class="sub" style="font-size:13px">Tippe auf eine Stunde, um sie zu ändern.</span>
@@ -1892,15 +1913,18 @@ function ExamForm({ kid, subjects, now }){
   </form>`;
 }
 function CellEdit({ kid, tt, at, subjects, onClose }){
-  const [v, setV] = useState(at.f); const [time, setTime] = useState(tt.times[at.ri] || '');
+  const [v, setV] = useState(at.f); const [time, setTime] = useState(tt.times[at.ri] || ''); const [endT, setEndT] = useState(hm2(lessonEnd(tt, at.ri)));
   const save = val => { const days = tt.days.map(d => (d || []).slice()); days[at.di][at.ri] = val ? val.trim() : null;
     const times = tt.times.slice(); times[at.ri] = time;
-    S.set('timetables/' + kid, Object.assign({}, tt, { days, times, updatedAt: Date.now() })); onClose(); };
+    const ends = tt.times.map((x, j) => (tt.ends && tt.ends[j]) || hm2(lessonEnd(tt, j))); ends[at.ri] = endT;
+    S.set('timetables/' + kid, Object.assign({}, tt, { days, times, ends, updatedAt: Date.now() })); onClose(); };
   return html`<${Sheet} title=${WD[at.di + 1] + ', ' + (at.ri + 1) + '. Stunde'} onClose=${onClose}>
     <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${e => { e.preventDefault(); save(v); }}>
       <label class="field">Fach<input id="cell-fach" value=${v} onInput=${e => setV(e.target.value)} placeholder="leer = frei" /></label>
       ${subjects.length ? html`<div class="row" style="gap:6px">${subjects.map(s => html`<button type="button" class="chip" aria-pressed=${v === s} onClick=${() => setV(s)}>${s}</button>`)}</div>` : null}
-      <label class="field">Beginn dieser Stunde<input id="cell-time" value=${time} onInput=${e => setTime(e.target.value)} placeholder="z. B. 8:00" /></label>
+      <div class="row"><label class="field" style="flex:1">Beginn dieser Stunde<input id="cell-time" value=${time} onInput=${e => setTime(e.target.value)} placeholder="z. B. 8:00" /></label>
+        <label class="field" style="flex:1">Ende dieser Stunde<input id="cell-end" value=${endT} onInput=${e => setEndT(e.target.value)} placeholder="z. B. 8:45" /></label></div>
+      <div class="sub" style="font-size:13px">Gilt für alle Tage. Zwischen zwei Stunden entsteht automatisch eine Pause.</div>
       <div class="row"><button class="btn" type="submit">Speichern</button><button type="button" class="btn ghost" onClick=${() => save('')}>Stunde frei</button></div>
     </form>
   <//>`;
