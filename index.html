@@ -131,6 +131,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .cell{position:relative;min-height:56px;border-radius:14px;border:3px solid transparent;display:flex;align-items:center;justify-content:center;padding:4px 8px;text-align:center;font-size:15px;font-weight:800;color:var(--fg);overflow-wrap:anywhere}
 .cell.empty-cell{background:transparent;border:2px dashed var(--line);color:var(--muted);font-weight:600}
 .cell.exam{border-color:var(--warn)}
+.fercount{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:6px 14px;border-radius:999px;background:var(--surface);border:2px solid var(--line);font-size:15px;font-weight:600}.fercount b{font-weight:800}.fercount .fshort{display:none}@media (max-width:600px){.fercount .flong{display:none}.fercount .fshort{display:inline}}
 .cell .badge{position:absolute;top:3px;right:4px;z-index:2;background:var(--warn);color:var(--on-m);font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;line-height:1.4}
 .cell.exam{padding-top:14px}
 .list{display:flex;flex-direction:column;gap:8px}
@@ -441,7 +442,7 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 .shopbar{display:flex;flex-direction:column;gap:12px}
 @media (max-width:820px), (orientation:portrait){
   .schoolhead{position:sticky;top:var(--navh,64px);z-index:44;margin:-14px -16px 0;padding:8px 16px;background:var(--bg);box-shadow:0 6px 10px -8px rgba(0,0,0,.25);gap:8px;flex-wrap:nowrap}
-  .schoolhead h1{font-size:20px}.schoolhead .sub{font-size:12px}
+  .schoolhead h1{font-size:20px}.schoolhead .sub{font-size:12px}.schoolhead .fercount{font-size:13px;padding:3px 10px;margin-top:4px;white-space:nowrap;gap:4px}
   .kidbar{gap:6px;flex-wrap:nowrap}
   .kidbtn{min-height:40px!important;padding:3px 12px 3px 3px!important;font-size:14px!important;gap:6px!important}
   .kidbtn .avatar{width:30px!important;height:30px!important;font-size:13px!important}
@@ -1932,7 +1933,7 @@ function Schule({ now }){
   const blank = () => S.set('timetables/' + kid, { times:['8:00','8:45','9:50','10:35','11:30','12:15'], days:[0,1,2,3,4].map(() => [null,null,null,null,null,null]), updatedAt: Date.now() });
   return html`
     <div class="head schoolhead">
-      <div><h1>Stundenplan</h1><div class="sub">KW ${kw(mon)} · ${dm(days[0])} – ${dm(days[4])}</div></div>
+      <div><h1>Stundenplan</h1><div class="sub">KW ${kw(mon)} · ${dm(days[0])} – ${dm(days[4])}</div><${FerienCount} now=${now} /></div>
       <div class="row stickbar kidbar" role="group" aria-label="Kind auswählen">
         ${SCHOOL.map(m => html`<button type="button" class="kidbtn" aria-pressed=${kid === m.id} onClick=${() => setKid(m.id)}
           style=${'display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 18px 6px 6px;border-radius:999px;font-size:17px;font-weight:800;color:var(--fg);background:' + (kid === m.id ? mt(m.id) : 'var(--surface)') + ';border:2px solid ' + (kid === m.id ? mc(m.id) : 'var(--line)')}>
@@ -2032,6 +2033,15 @@ function BusCard({ tt, kid, now }){
       <${FreeDays} />
       <div class="sub" style="font-size:13px">Gilt für ${SCHOOL.map(m => m.name).join(' und ')}. In den hessischen Schulferien und an Feiertagen gibt es keinen Bus und keine Ampel. Der Bus ergibt sich aus der ersten Stunde im Stundenplan. Auf „Heute“ zeigt eine Ampel, wann es losgeht: grün = noch Zeit, orange ab 15 Min., rot ab 5 Min. Dort kann man den Bus auch nur für heute ignorieren.</div>`}
   </div>`;
+}
+function FerienCount({ now }){
+  const t = iso(now); const cur = FERIEN_HE.find(x => t >= x[0] && t <= x[1]);
+  const diff = ds => Math.round((fromIso(ds) - fromIso(t)) / 864e5);
+  let txt, big, short;
+  if (cur) { const n = diff(cur[1]); big = n === 0 ? 'Letzter Tag' : 'Noch ' + n; txt = n === 0 ? cur[2] + ' – morgen geht die Schule wieder los' : (n === 1 ? 'Tag ' : 'Tage ') + cur[2]; short = n === 0 ? 'Ferien' : (n === 1 ? 'Tag' : 'Tage') + ' Ferien'; }
+  else { const nx = FERIEN_HE.find(x => x[0] > t); if (!nx) return null; const n = diff(nx[0]);
+    big = n === 1 ? 'Morgen' : 'Noch ' + n; txt = n === 1 ? 'beginnen die ' + nx[2] : 'Tage bis zu den ' + nx[2] + ' (ab ' + dm(fromIso(nx[0])) + ')'; short = n === 1 ? 'Ferien!' : 'Tage bis Ferien'; }
+  return html`<div class="fercount" role="status" title=${big + ' ' + txt}><${Icon} n="sun" size=${18} /><b>${big}</b> <span class="flong">${txt}</span><span class="fshort">${short}</span></div>`;
 }
 function FreeDays(){
   const fd = useDoc('config/freidays'); const days = (fd && fd.days) || {};
