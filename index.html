@@ -1140,19 +1140,22 @@ function TimeField({ label, value, onChange, placeholder, id, style }){
 }
 function TypePreview(){
   const [st, setSt] = useState(null);
-  const [pos, setPos] = useState('top:0');
+  const [pos, setPos] = useState('top:0'); const [hide, setHide] = useState(false);
   const pv = useRef(null); const curRef = useRef(null);
   useEffect(() => {
     let maxH = window.innerHeight;
     const ok = el => el && el !== pv.current && ((el.tagName === 'INPUT' && !/^(checkbox|radio|file|button|submit|range|color|hidden|date|time)$/i.test(el.type)) || el.tagName === 'TEXTAREA');
     const lab = el => { const l = el.getAttribute('aria-label') || (el.labels && el.labels[0] && el.labels[0].firstChild && el.labels[0].firstChild.nodeType === 3 ? el.labels[0].firstChild.textContent : '') || el.placeholder || 'Eingabe'; return l.trim(); };
-    const place = () => { const vv = window.visualViewport; const ih = window.innerHeight;
-      if (!curRef.current) maxH = Math.max(maxH, ih);
-      if (vv && ih - vv.height > 120) setPos('bottom:' + Math.max(0, Math.round(ih - (vv.offsetTop + vv.height))) + 'px');
-      else if (maxH - ih > 120) setPos('bottom:0');
-      else setPos('top:0'); };
+    /* immer oben fest – springt beim Tippen nicht mehr (auch wenn die Tastatur auf- und zugeht) */
+    const place = () => { const vv = window.visualViewport; setPos('top:' + Math.max(0, Math.round(vv ? vv.offsetTop : 0)) + 'px');
+      /* nur zeigen, wenn das eigentliche Feld verdeckt ist (z. B. von der Tastatur) – sonst ist es unnötig */
+      const c = curRef.current; if (!c) return;
+      if (document.activeElement === pv.current) { setHide(false); return; }
+      const r = c.getBoundingClientRect(); const top = vv ? vv.offsetTop : 0; const h = vv ? vv.height : window.innerHeight;
+      /* Feld steht in der oberen Bildschirmhälfte und ist sichtbar → keine Leiste; weiter unten könnte die Tastatur es verdecken */
+      setHide(r.top >= top + 60 && r.bottom <= top + Math.min(h - 10, window.innerHeight * 0.5)); };
     const upd = () => { const c = curRef.current; if (!c) return; setSt({ label: lab(c), val: c.value, quick: !!(c.form && c.form.getAttribute('data-quick')), ph: c.placeholder || '', type: c.type === 'password' ? 'password' : c.type === 'email' ? 'email' : 'text', im: c.getAttribute('inputmode') || '' }); place(); };
-    const fin = e => { if (e.target === pv.current) return; if (ok(e.target)) { curRef.current = e.target; upd(); setTimeout(place, 400); } };
+    const fin = e => { if (e.target === pv.current) return; if (ok(e.target)) { curRef.current = e.target; upd(); setTimeout(place, 350); setTimeout(place, 900); } };
     const fout = () => setTimeout(() => { const a = document.activeElement; if (curRef.current && a !== curRef.current && a !== pv.current) { curRef.current = null; setSt(null); } }, 120);
     const inp = e => { if (e.target === curRef.current) upd(); };
     document.addEventListener('focusin', fin); document.addEventListener('focusout', fout); document.addEventListener('input', inp, true);
@@ -1175,7 +1178,7 @@ function TypePreview(){
   const done = () => { const c = curRef.current;
     if (quick()) { const f = c.form; if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
     if (pv.current) pv.current.blur(); if (c) c.blur(); curRef.current = null; setSt(null); };
-  if (!st) return null;
+  if (!st || hide) return null;
   return html`<div class="typeprev" style=${pos}>
     <label class="tl" for="typeprev-in">${st.label}</label>
     <div class="tprow">
