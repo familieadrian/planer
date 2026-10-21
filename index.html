@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2F5BD3">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Familienboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
+<style>
+/* Layout: Wandtablet im Querformat – Menüleiste links, Inhalt rechts; am Handy Menüleiste unten */
+:root{
+  --font:'Nunito',ui-rounded,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --bg:#EEF1F6;--surface:#FFFFFF;--surface-2:#F5F7FB;--line:#E2E6EE;--fg:#1E2430;--muted:#5B6577;
+  --accent:#2F5BD3;--accent-fg:#FFFFFF;--accent-soft:#E6EDFC;--accent-ink:#1F44A8;
+  --warn:#C2570C;--warn-soft:#FCE9D9;--warn-ink:#8F3E07;--ok-ink:#2F6418;--ok-soft:#EAF3E3;
+  --danger:#C23B3B;--danger-soft:#FBE4E4;--star:#F2A93B;--star-line:#C9821A;--food-bg:#FFF4E5;--food-line:#F1E2CC;
+  --on-m:#FFFFFF;--scrim:rgba(20,24,32,.45);
+  --m-klaus:#3B5BA9;--t-klaus:#E3EAF8;--m-helena:#B83E6B;--t-helena:#F8E3EC;--m-dorothea:#0E7C7B;--t-dorothea:#DDF2F1;
+  --m-marlene:#C2570C;--t-marlene:#FCE9D9;--m-clemens:#3F7D20;--t-clemens:#E4F2DA;--m-familie:#5B6577;--t-familie:#EEF1F6;
+  --tone-0:#FBE3E1;--tone-1:#E1ECFB;--tone-2:#E8E5FA;--tone-3:#DFF1E5;--tone-4:#FFEFD3;--tone-5:#FAE3F1;--tone-6:#EAF3D8;--tone-7:#EFEBE5;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151C;--surface:#1A2029;--surface-2:#222A35;--line:#2E3744;--fg:#E8ECF2;--muted:#9AA4B5;
+  --accent:#6C8EF0;--accent-fg:#0E1420;--accent-soft:#22314F;--accent-ink:#B4C6F8;
+  --warn:#F0A060;--warn-soft:#3A2A1C;--warn-ink:#F5C49A;--ok-ink:#A8D98C;--ok-soft:#1F2E1A;
+  --danger:#E06565;--danger-soft:#3A1E1E;--star:#F2B44F;--star-line:#C9821A;--food-bg:#2A2218;--food-line:#3D3123;
+  --on-m:#11151C;--scrim:rgba(0,0,0,.6);
+  --m-klaus:#8FA8E8;--t-klaus:#24304A;--m-helena:#E58DB0;--t-helena:#3D2230;--m-dorothea:#5CC7C5;--t-dorothea:#173634;
+  --m-marlene:#F0A060;--t-marlene:#3A2A1C;--m-clemens:#8FCB6B;--t-clemens:#22331A;--m-familie:#9AA4B5;--t-familie:#262E3A;
+  --tone-0:#3A2422;--tone-1:#1F2C40;--tone-2:#2A2742;--tone-3:#1D3326;--tone-4:#3A2F1A;--tone-5:#3A2232;--tone-6:#26311A;--tone-7:#2E2B27;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151C;--surface:#1A2029;--surface-2:#222A35;--line:#2E3744;--fg:#E8ECF2;--muted:#9AA4B5;
+  --accent:#6C8EF0;--accent-fg:#0E1420;--accent-soft:#22314F;--accent-ink:#B4C6F8;
+  --warn:#F0A060;--warn-soft:#3A2A1C;--warn-ink:#F5C49A;--ok-ink:#A8D98C;--ok-soft:#1F2E1A;
+  --danger:#E06565;--danger-soft:#3A1E1E;--star:#F2B44F;--star-line:#C9821A;--food-bg:#2A2218;--food-line:#3D3123;
+  --on-m:#11151C;--scrim:rgba(0,0,0,.6);
+  --m-klaus:#8FA8E8;--t-klaus:#24304A;--m-helena:#E58DB0;--t-helena:#3D2230;--m-dorothea:#5CC7C5;--t-dorothea:#173634;
+  --m-marlene:#F0A060;--t-marlene:#3A2A1C;--m-clemens:#8FCB6B;--t-clemens:#22331A;--m-familie:#9AA4B5;--t-familie:#262E3A;
+  --tone-0:#3A2422;--tone-1:#1F2C40;--tone-2:#2A2742;--tone-3:#1D3326;--tone-4:#3A2F1A;--tone-5:#3A2232;--tone-6:#26311A;--tone-7:#2E2B27;
+  color-scheme:dark}
+html,body{height:100%;margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;-webkit-tap-highlight-color:transparent}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;text-wrap:balance}
+#root{height:100%}
+.app{height:100%;display:flex}
+.nav{width:104px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:20px;overflow:auto}
+.logo{width:52px;height:52px;border-radius:16px;background:var(--accent);color:var(--accent-fg);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.nav>a{width:84px;padding:10px 0;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;text-decoration:none;font-size:13px;font-weight:700;color:var(--muted)}
+.nav>a[aria-current="page"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:800}
+.nav .sync{margin-top:auto;font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding:0 8px;line-height:1.3}
+.main{flex:1;min-width:0;overflow:auto;padding-block:22px 28px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+.head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.head h1{font-size:30px;font-weight:800;letter-spacing:-.3px}
+.sub{font-size:16px;font-weight:600;color:var(--muted)}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card{background:var(--surface);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.btn{min-height:48px;padding:0 18px;border:none;border-radius:14px;background:var(--accent);color:var(--accent-fg);font-size:16px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.ghost{background:var(--surface);color:var(--fg);border:2px solid var(--line)}
+.btn.soft{background:var(--accent-soft);color:var(--accent-ink)}
+.btn.small{min-height:40px;padding:0 14px;font-size:14px;border-radius:12px}
+.btn:disabled{opacity:.5;cursor:default}
+.iconbtn{width:44px;height:44px;flex-shrink:0;border:none;border-radius:12px;background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center}
+.chip{min-height:40px;padding:6px 14px;border-radius:999px;border:2px solid var(--line);background:var(--surface);font-size:14px;font-weight:800}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.seg{display:flex;background:var(--surface);border-radius:999px;padding:5px;gap:4px;border:1px solid var(--line)}
+.seg button{display:flex;align-items:center;gap:8px;border:none;border-radius:999px;padding:8px 18px;min-height:44px;font-size:16px;font-weight:800;background:transparent;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:800;color:var(--muted);min-width:0}
+.field input,.field select,.input{height:48px;border:2px solid var(--line);border-radius:14px;padding:0 14px;font-size:16px;font-weight:700;color:var(--fg);background:var(--surface);box-sizing:border-box;width:100%;min-width:0}
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;box-sizing:border-box}
+.avatar-btn{width:52px;height:52px;font-size:19px;border:3px solid transparent}
+.empty{border:2px dashed var(--line);border-radius:20px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;color:var(--muted);font-weight:700}
+.empty strong{color:var(--fg);font-size:17px}
+.clock{font-size:44px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.todaychips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tchip{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:700}
+.tchip.exam{background:var(--warn-soft);border-color:transparent;color:var(--warn-ink);font-weight:800}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.cols{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:stretch;flex:1}
+.col{background:var(--surface);border-radius:24px;padding:16px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.colhead{display:flex;align-items:center;gap:12px;padding-bottom:4px}
+.colhead .avatar{width:52px;height:52px;font-size:22px;border:3px solid}
+.colname{font-size:19px;font-weight:800}
+.stars{display:flex;align-items:center;gap:5px;font-size:15px;font-weight:800}
+.task{display:flex;align-items:center;gap:10px;min-height:62px;padding:8px 10px;border-radius:16px;box-sizing:border-box;text-align:left;width:100%;border:2px solid var(--line);background:var(--surface)}
+.task .ic{width:44px;height:44px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.task .lbl{flex:1;min-width:0;font-size:15px;font-weight:800;line-height:1.2}
+.task .chk{width:30px;height:30px;flex-shrink:0;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid var(--line);background:var(--surface)}
+.progress{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.progress>div{height:100%;border-radius:5px;transition:width .3s}
+.done-badge{display:flex;align-items:center;justify-content:center;gap:6px;border-radius:12px;padding:8px;font-size:15px;font-weight:800}
+.iconpick{display:flex;flex-wrap:wrap;gap:4px}
+.iconpick button{width:36px;height:36px;border-radius:10px;border:2px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;padding:0}
+.iconpick button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.split{display:flex;gap:20px;align-items:flex-start}
+.split>.grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+.split>aside{width:360px;flex-shrink:0;display:flex;flex-direction:column;gap:14px}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+.day{background:var(--surface);border-radius:20px;padding:12px 10px;display:flex;flex-direction:column;gap:8px;min-width:0;border:2px solid transparent;min-height:180px}
+.day.today{border-color:var(--accent)}
+.dayhead{display:flex;align-items:baseline;gap:6px;padding:0 4px 2px;font-weight:800}
+.dayhead .n{font-size:26px}
+.today .dayhead{color:var(--accent)}
+.ev{border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;text-align:left;border:none;width:100%;color:var(--fg)}
+.ev .t{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--muted)}
+.ev .x{font-size:14px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+.ev.exam{background:var(--warn-soft)}
+.ev.exam .x{color:var(--warn-ink)}
+.addday{border:none;background:transparent;color:var(--muted);border-radius:10px;min-height:36px;font-weight:800;font-size:13px;margin-top:auto}
+.tt{display:grid;gap:8px}
+.tt .h{display:flex;align-items:baseline;justify-content:center;gap:6px;padding:8px 0;border-radius:12px;background:var(--surface-2);font-weight:800}
+.tt .h.today{background:var(--accent);color:var(--accent-fg)}
+.tt .tm{display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800}
+.tt .tm small{font-size:12px;color:var(--muted);font-weight:700}
+.cell{position:relative;min-height:56px;border-radius:14px;border:3px solid transparent;display:flex;align-items:center;justify-content:center;padding:4px 8px;text-align:center;font-size:15px;font-weight:800;color:var(--fg);overflow-wrap:anywhere}
+.cell.empty-cell{background:transparent;border:2px dashed var(--line);color:var(--muted);font-weight:600}
+.cell.exam{border-color:var(--warn)}
+.cell .badge{position:absolute;top:-10px;right:6px;background:var(--warn);color:var(--on-m);font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px}
+.list{display:flex;flex-direction:column;gap:8px}
+.li{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:16px;background:var(--surface-2);min-width:0}
+.li .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.li .tx b{font-size:16px}
+.li .tx span{font-size:13px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.count{flex-shrink:0;font-size:13px;font-weight:800;padding:5px 10px;border-radius:999px;background:var(--surface);color:var(--muted)}
+.count.soon{background:var(--warn-soft);color:var(--warn-ink)}
+.shop{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.item{display:flex;align-items:center;gap:10px;min-height:56px;padding:6px 6px 6px 12px;border-radius:14px;border:2px solid var(--line);background:var(--surface);min-width:0}
+.item>button.main-tap{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:none;background:transparent;text-align:left;padding:4px 0;min-height:44px}
+.item .circle{width:28px;height:28px;flex-shrink:0;border-radius:50%;border:2px solid var(--line);box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.item.done{background:var(--surface-2);border-color:transparent}
+.item.done .nm{text-decoration:line-through;color:var(--muted)}
+.item.done .circle{background:var(--accent);border-color:var(--accent)}
+.nm{font-size:17px;font-weight:800;overflow-wrap:anywhere}
+.mic{width:56px;height:56px;flex-shrink:0;border:none;border-radius:16px;background:var(--fg);color:var(--bg);display:flex;align-items:center;justify-content:center}
+.mic.on{background:var(--danger);color:#FFFFFF}
+.mic.on svg{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+@media (prefers-reduced-motion:reduce){.mic.on svg{animation:none}.progress>div{transition:none}}
+.hint{padding:10px 14px;border-radius:14px;font-size:14px;font-weight:700;background:var(--ok-soft);color:var(--ok-ink)}
+.hint.warn{background:var(--warn-soft);color:var(--warn-ink)}
+.meals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.meal{background:var(--surface);border-radius:22px;padding:12px;display:flex;flex-direction:column;gap:8px;border:3px solid transparent;text-align:left;color:var(--fg);min-width:0}
+.meal.today{border-color:var(--accent)}
+.meal .mh{display:flex;align-items:baseline;justify-content:space-between;font-weight:800}
+.meal .mh small{font-size:13px;color:var(--muted);font-weight:700}
+.meal .pic{border-radius:16px;background:var(--food-bg);aspect-ratio:4/3;max-width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.meal .pic.none{border:2px dashed var(--food-line);background:transparent;color:var(--muted);font-weight:800;font-size:14px}
+.meal .dish{font-size:16px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+.art{display:block;width:78%;max-width:100%}
+.art svg{display:block;width:100%;height:auto}
+.foods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.food{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px 8px;border-radius:16px;border:2px solid var(--food-line);background:var(--food-bg);color:var(--fg)}
+.food .art{width:100%}
+.food span{font-size:12px;font-weight:800;line-height:1.15;text-align:center}
+.thumb{width:44px;height:44px;flex-shrink:0;border-radius:12px;background:var(--food-bg);display:flex;align-items:center;justify-content:center}
+.thumb .art{width:40px}
+.overlay{position:fixed;inset:0;background:var(--scrim);z-index:50;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{background:var(--surface);border-radius:24px;padding:20px;width:100%;max-width:620px;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px;box-sizing:border-box}
+.sheet.wide{max-width:900px}
+.sheet .sh{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sheet .sh h2{font-size:22px;font-weight:800}
+.shot{max-height:220px;max-width:100%;border-radius:14px;border:1px solid var(--line);object-fit:contain;align-self:flex-start}
+.file{display:flex;align-items:center;justify-content:center;gap:10px;min-height:120px;border:2px dashed var(--line);border-radius:18px;font-weight:800;color:var(--muted);cursor:pointer;text-align:center;padding:12px}
+.file input{position:absolute;width:1px;height:1px;opacity:0}
+.check{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border-radius:14px;background:var(--surface-2);font-weight:700}
+.check input{width:22px;height:22px;margin-top:2px;flex-shrink:0}
+.ovx{overflow-x:auto}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:14px;font-weight:800;max-width:calc(100% - 32px)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.loading{color:var(--muted);font-weight:700;padding:12px}
+@media (max-width:1100px){.cols{grid-template-columns:repeat(3,minmax(0,1fr))}.meals{grid-template-columns:repeat(3,minmax(0,1fr))}.week{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (orientation:portrait) and (min-width:821px){
+  .app{flex-direction:column}
+  .nav{order:2;width:auto;flex-direction:row;justify-content:space-around;border-right:none;border-top:1px solid var(--line);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));gap:8px;overflow:visible}
+  .nav .logo{display:none}
+  .nav>a{flex:1;max-width:180px;padding:12px 0;font-size:16px}
+  .nav .sync{margin:0;align-self:center;width:110px}
+  .main{order:1;flex:1;min-height:0}
+  .cols{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+  .col{padding:14px 10px}
+  .task{position:relative;flex-direction:column;justify-content:center;text-align:center;gap:8px;min-height:120px;padding:12px 6px}
+  .task .ic{width:56px;height:56px}
+  .task .lbl{flex:0 0 auto;width:100%;font-size:16px;overflow-wrap:anywhere;hyphens:auto}
+  .task .chk{position:absolute;top:8px;right:8px;width:26px;height:26px}
+  .week{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .split{flex-direction:column;align-items:stretch}
+  .split>aside{width:auto}
+  .split>aside:not(.card){display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));align-items:start}
+  .meals{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (max-width:820px){
+  .app{flex-direction:column}
+  .nav{position:fixed;left:0;right:0;bottom:0;width:auto;height:auto;flex-direction:row;justify-content:space-around;padding-block:6px calc(6px + env(safe-area-inset-bottom,0px));padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));border-right:none;border-top:1px solid var(--line);z-index:40;gap:2px}
+  .nav .logo,.nav .sync{display:none}
+  .nav>a{width:auto;flex:1;padding:6px 0;font-size:12px}
+  .main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 100px;overflow:visible}
+  .app{height:auto;min-height:100%}
+  .cols{grid-template-columns:1fr}
+  .split{flex-direction:column;align-items:stretch}
+  .split>aside{width:auto}
+  .week{grid-template-columns:1fr}
+  .day{min-height:0}
+  .meals{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .shop{grid-template-columns:1fr}
+  .clock{font-size:32px}
+  .head h1{font-size:26px}
+}
+</style>
+
+</head>
+<body>
+<div id="root"><div class="loading" style="padding:24px">Familienboard wird geladen …</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function(){
+const { html, render, useState, useEffect, useRef } = htmPreact;
+
+/* ---------- Familie ---------- */
+const MEMBERS = [
+  { id:'klaus', name:'Klaus', role:'Papa', kid:false },
+  { id:'helena', name:'Helena', role:'Mama', kid:false },
+  { id:'dorothea', name:'Dorothea', kid:true, school:true },
+  { id:'marlene', name:'Marlene', kid:true, school:true },
+  { id:'clemens', name:'Clemens', kid:true }
+];
+const WHO = MEMBERS.concat([{ id:'familie', name:'Familie' }]);
+const byId = {}; WHO.forEach(m => byId[m.id] = m);
+const mc = id => 'var(--m-' + id + ')';
+const mt = id => 'var(--t-' + id + ')';
+const ini = id => (byId[id] ? byId[id].name[0] : '?');
+const SCHOOL = MEMBERS.filter(m => m.school);
+
+/* ---------- Datum ---------- */
+const pad = n => String(n).padStart(2,'0');
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+const fromIso = s => { const p = s.split('-').map(Number); return new Date(p[0], p[1]-1, p[2], 12); };
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const monday = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12); return addDays(x, -((x.getDay()+6)%7)); };
+const WD = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+const dm = d => d.getDate() + '.' + (d.getMonth()+1) + '.';
+function kw(d){ const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate()+4-day); const y0 = new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil(((t-y0)/864e5+1)/7); }
+const daysUntil = (s, now) => Math.round((fromIso(s) - fromIso(iso(now))) / 864e5);
+const countdown = n => n === 0 ? 'heute' : n === 1 ? 'morgen' : 'in ' + n + ' Tagen';
+
+/* ---------- Icons ---------- */
+const IC = {
+  shirt:'M8 3L3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z',
+  tooth:'M7 3C5 3 3 5 3 8c0 4 2 5 2.5 9 .3 2 1.5 4 2.5 4s1.5-3 2-5c.5-2 1.5-2 2 0 .5 2 1 5 2 5s2.2-2 2.5-4c.5-4 2.5-5 2.5-9 0-3-2-5-4-5-2 0-3 1-5 1S9 3 7 3z',
+  bed:'M3 18V6M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 10.5h.01',
+  bowl:'M3 11h18a9 9 0 0 1-18 0zM8 7c0-1 1-1 1-2s-1-1-1-2M12 7c0-1 1-1 1-2s-1-1-1-2M16 7c0-1 1-1 1-2s-1-1-1-2',
+  shoe:'M3 16v-6l5-1 3 3 6 1a4 4 0 0 1 4 3v1H3zM3 19h18',
+  bag:'M6 9a6 6 0 0 1 12 0v12H6zM9 5V3h6v2M9 14h6v4H9z',
+  lunch:'M4 10h16v10H4zM8 10V7a4 4 0 0 1 8 0v3M4 14h16',
+  dish:'M3 12h18M5 12a7 7 0 0 0 14 0M8 20h8M12 4v4',
+  bin:'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
+  car:'M3 16v-4l2-5h14l2 5v4zM3 16v2h3v-2M18 16v2h3v-2M7 13h.01M17 13h.01',
+  book:'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M19 19v2H6',
+  basket:'M4 9h16l-2 11H6zM8 9l4-5 4 5M9 13v3M15 13v3',
+  fork:'M7 3v8a2 2 0 0 0 4 0V3M9 11v10M17 3c-2.5 2-2.5 7 0 9v9',
+  pencil:'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3',
+  drop:'M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z',
+  moon:'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z',
+  blocks:'M4 14h7v7H4zM13 14h7v7h-7zM8 3h7v7H8z',
+  star:'M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3l-5.5 2.9 1-6.2L3 9.6l6.2-.9z',
+  cal:'M4 5h16v16H4zM4 10h16M8 3v4M16 3v4',
+  school:'M2 9l10-5 10 5-10 5zM6 11v5c3 2.5 9 2.5 12 0v-5',
+  cart:'M3 4h2l2.4 11h11L21 7H6.4M9 20h.01M18 20h.01',
+  home:'M3 11l9-8 9 8M5 9.5V21h14V9.5M10 21v-6h4v6',
+  sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  plus:'M12 5v14M5 12h14',
+  x:'M6 6l12 12M18 6L6 18',
+  check:'M5 12.5l4.5 4.5L19 7.5',
+  mic:'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M8 21h8',
+  camera:'M4 8h3l2-3h6l2 3h3v11H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z',
+  left:'M15 5l-7 7 7 7', right:'M9 5l7 7-7 7',
+  edit:'M4 20l4-1 11-11-3-3L5 16z',
+  paw:'M8 13c-2 0-4 2-4 4s2 3 4 2 3-1 4-1 2 1 4 1 4 0 4-2-2-4-4-4-3 2-4 2-2-2-4-2zM7 9a1.5 2 0 1 0 0 .01M17 9a1.5 2 0 1 0 0 .01M10 6a1.5 2 0 1 0 0 .01M14 6a1.5 2 0 1 0 0 .01',
+  music:'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zM20 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3z'
+};
+const TASK_ICONS = ['shirt','tooth','bed','bowl','shoe','bag','lunch','dish','bin','car','book','basket','fork','pencil','drop','moon','blocks','paw','music','star'];
+function Icon({ n, size = 24, color = 'currentColor', sw = 2, fill = 'none' }){
+  return html`<svg width=${size} height=${size} viewBox="0 0 24 24" fill=${fill} stroke=${color} stroke-width=${sw} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${IC[n] || IC.star}></path></svg>`;
+}
+const Star = ({ size = 18 }) => html`<svg width=${size} height=${size} viewBox="0 0 24 24" fill="var(--star)" stroke="var(--star-line)" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d=${IC.star}></path></svg>`;
+
+/* ---------- Comic-Essen ---------- */
+const O = '#2A1E14';
+const s3 = 'stroke="' + O + '" stroke-width="3" stroke-linejoin="round"';
+const s2 = 'stroke="' + O + '" stroke-width="2.4" stroke-linejoin="round"';
+const svg = b => '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + b + '</svg>';
+const plate = (cy, rx, ry) => '<ellipse cx="60" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" fill="#FFFFFF" ' + s3 + '/><ellipse cx="60" cy="' + (cy-1) + '" rx="' + (rx-12) + '" ry="' + (ry-7) + '" fill="#DCEBFA"/>';
+const ART = {
+  spaghetti: svg(plate(82,52,24) +
+    '<path d="M26 78c2-20 15-32 34-32s32 12 34 32c-9 6-21 9-34 9s-25-3-34-9z" fill="#FFD45C" ' + s3 + '/>' +
+    '<path d="M34 74c6-6 10 4 16-2s10 4 16-2 10 4 16-2M38 63c6-5 10 3 16-2s10 3 16-2 8 3 12-1" fill="none" stroke="#DFA21F" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M42 54c4-10 32-10 36 0 2 7-7 11-18 11s-20-4-18-11z" fill="#E8432E" ' + s3 + '/>' +
+    '<circle cx="52" cy="54" r="6.5" fill="#8A4A24" ' + s2 + '/><circle cx="69" cy="52" r="6.5" fill="#8A4A24" ' + s2 + '/>' +
+    '<circle cx="50" cy="52" r="2" fill="#FFFFFF"/><circle cx="67" cy="50" r="2" fill="#FFFFFF"/>' +
+    '<path d="M58 44c-2-6 2-9 6-9 0 5-2 8-6 9z" fill="#3DAA4A" ' + s2 + '/>'),
+  pizza: svg('<circle cx="60" cy="62" r="48" fill="#E9A445" ' + s3 + '/><circle cx="60" cy="62" r="39" fill="#FFD45C" ' + s2 + '/>' +
+    '<path d="M60 23v78M21 62h78" stroke="#D99A2B" stroke-width="2.5"/>' +
+    [[44,48],[73,46],[58,74],[80,70],[40,76],[62,58]].map(p => '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="7.5" fill="#D8392B" ' + s2 + '/><circle cx="' + (p[0]-2) + '" cy="' + (p[1]-2) + '" r="2" fill="#F48C7E"/>').join('') +
+    '<path d="M54 36c4-4 10-3 11 1-4 3-9 3-11-1zM32 60c2-5 8-6 10-2-3 4-8 4-10 2zM84 56c3-4 9-3 9 1-3 3-8 3-9-1z" fill="#3DAA4A" ' + s2 + '/>' +
+    '<path d="M34 30c6-6 14-10 22-11" fill="none" stroke="#FFF2C4" stroke-width="4" stroke-linecap="round"/>'),
+  pfannkuchen: svg('<ellipse cx="60" cy="96" rx="50" ry="13" fill="#FFFFFF" ' + s3 + '/>' +
+    [84,70,56].map(y => '<path d="M20 ' + y + 'c0 10 80 10 80 0v8c0 10-80 10-80 0z" fill="#E59A35" ' + s3 + '/><ellipse cx="60" cy="' + y + '" rx="40" ry="9" fill="#FFC968" ' + s3 + '/>').join('') +
+    '<path d="M28 56c6 6 58 6 64 0 1 8-1 16-5 16s-4-8-7-8-1 13-7 13-4-11-8-11-3 7-8 7-6-9-7-9-4 6-8 4-5-8-14-12z" fill="#A4521D" ' + s2 + '/>' +
+    '<path d="M50 44l14-5 9 6-14 5z" fill="#FFF0A0" ' + s2 + '/><path d="M50 44v5l9 6v-5" fill="#F2DC6A" ' + s2 + '/>' +
+    '<path d="M36 52c6-3 14-4 20-4" fill="none" stroke="#FFE3A8" stroke-width="3.5" stroke-linecap="round"/>'),
+  fisch: svg(plate(70,54,34) +
+    [[30,44,-12],[28,60,-6],[32,76,-14]].map(r => '<rect x="' + r[0] + '" y="' + r[1] + '" width="46" height="13" rx="5" fill="#E58B2A" ' + s3 + ' transform="rotate(' + r[2] + ' ' + (r[0]+23) + ' ' + (r[1]+6) + ')"/>').join('') +
+    '<path d="M38 50h.1M50 48h.1M44 66h.1M60 64h.1M46 82h.1M58 80h.1" stroke="#9A4E12" stroke-width="3.5" stroke-linecap="round"/>' +
+    '<path d="M78 52h26a13 13 0 0 1-26 0z" fill="#FFE14D" ' + s3 + '/><path d="M91 52v10M84 53l7 8M98 53l-7 8" stroke="#E2BC12" stroke-width="2"/>' +
+    '<path d="M76 84c4-7 15-7 17 0s-3 10-9 10-11-4-8-10z" fill="#E8432E" ' + s3 + '/><circle cx="81" cy="84" r="2" fill="#FF9A8C"/>'),
+  burger: svg('<path d="M22 86h76c0 10-9 16-21 16H43c-12 0-21-6-21-16z" fill="#E9A445" ' + s3 + '/>' +
+    '<rect x="18" y="70" width="84" height="16" rx="8" fill="#7A3F1E" ' + s3 + '/>' +
+    '<path d="M20 70h80l-9 11-8-6-8 9-8-9-8 9-8-9-8 9-8-9-8 6z" fill="#FFC928" ' + s2 + '/>' +
+    '<rect x="24" y="60" width="72" height="9" rx="4.5" fill="#E8432E" ' + s2 + '/>' +
+    '<path d="M18 62c6-7 10 4 16-2s10 4 16-2 10 4 16-2 10 4 16-2 10 4 20 0" fill="none" stroke="#3DAA4A" stroke-width="6" stroke-linecap="round"/>' +
+    '<path d="M18 58c0-24 19-38 42-38s42 14 42 38z" fill="#F2B04A" ' + s3 + '/>' +
+    '<g fill="#FFF6D8" ' + s2.replace('2.4','1.5') + '><ellipse cx="44" cy="36" rx="3" ry="2"/><ellipse cx="60" cy="30" rx="3" ry="2"/><ellipse cx="76" cy="37" rx="3" ry="2"/><ellipse cx="52" cy="46" rx="3" ry="2"/><ellipse cx="70" cy="47" rx="3" ry="2"/></g>' +
+    '<path d="M30 44c3-9 10-14 18-16" fill="none" stroke="#FFE3A8" stroke-width="4" stroke-linecap="round"/>'),
+  suppe: svg('<path d="M46 30c-6-6 6-10 0-16M60 30c-6-6 6-10 0-16M74 30c-6-6 6-10 0-16" fill="none" stroke="#9FB4C8" stroke-width="3.5" stroke-linecap="round"/>' +
+    '<line x1="82" y1="50" x2="104" y2="20" stroke="' + O + '" stroke-width="10" stroke-linecap="round"/><line x1="82" y1="50" x2="104" y2="20" stroke="#C9D3DD" stroke-width="5" stroke-linecap="round"/>' +
+    '<path d="M44 96h32l-4 10H48z" fill="#C7322A" ' + s3 + '/>' +
+    '<path d="M14 56h92c0 26-21 42-46 42S14 82 14 56z" fill="#E8432E" ' + s3 + '/>' +
+    '<g fill="#FFFFFF"><circle cx="30" cy="70" r="3"/><circle cx="46" cy="82" r="3"/><circle cx="64" cy="76" r="3"/><circle cx="82" cy="84" r="3"/><circle cx="92" cy="68" r="3"/></g>' +
+    '<ellipse cx="60" cy="56" rx="46" ry="11" fill="#F7A23B" ' + s3 + '/>' +
+    '<g ' + s2 + '><circle cx="40" cy="55" r="4" fill="#F06A1E"/><circle cx="72" cy="58" r="4" fill="#F06A1E"/><circle cx="56" cy="52" r="3" fill="#3DAA4A"/><circle cx="84" cy="54" r="3" fill="#3DAA4A"/></g>' +
+    '<path d="M46 60c4 2 8-2 12 0M62 52c4 2 8-2 12 0" fill="none" stroke="#FFE07A" stroke-width="3" stroke-linecap="round"/>'),
+  wrap: svg('<path d="M20 90L78 24c9-7 24 6 17 17L34 104c-7 7-21-4-14-14z" fill="#F4D9A0" ' + s3 + '/>' +
+    '<path d="M38 82l9 7M50 68l9 7M62 54l9 7" stroke="#C99A50" stroke-width="3.5" stroke-linecap="round"/>' +
+    '<ellipse cx="88" cy="32" rx="15" ry="11" transform="rotate(-48 88 32)" fill="#5CC24E" ' + s3 + '/>' +
+    '<circle cx="84" cy="30" r="4.5" fill="#E8432E" ' + s2 + '/><circle cx="93" cy="35" r="4" fill="#E8432E" ' + s2 + '/><rect x="88" y="23" width="5" height="5" rx="1" fill="#FFD23F" ' + s2 + '/>' +
+    '<path d="M30 92c10-12 24-28 38-44" fill="none" stroke="#FFF1CF" stroke-width="3.5" stroke-linecap="round"/>'),
+  schnitzel: svg(plate(68,54,34) +
+    '<path d="M20 66c-2-15 12-25 28-23 8-11 31-11 39 2 15 0 21 15 13 25 2 13-15 19-27 15-11 8-31 6-37-2-13 0-19-9-16-17z" fill="#E3A33A" ' + s3 + '/>' +
+    '<g fill="#B8761E"><circle cx="38" cy="58" r="2"/><circle cx="52" cy="66" r="2"/><circle cx="66" cy="56" r="2"/><circle cx="74" cy="72" r="2"/><circle cx="44" cy="76" r="2"/><circle cx="60" cy="80" r="2"/><circle cx="82" cy="62" r="2"/></g>' +
+    '<circle cx="88" cy="46" r="12" fill="#FFE14D" ' + s3 + '/><circle cx="88" cy="46" r="7.5" fill="#FFF27A"/><path d="M88 39v14M81 46h14M83 41l10 10M93 41l-10 10" stroke="#E2BC12" stroke-width="1.6"/>' +
+    '<path d="M30 52c4-5 10-7 16-7" fill="none" stroke="#F8D48A" stroke-width="3.5" stroke-linecap="round"/>'),
+  pommes: svg([[34,-10],[44,-4],[54,2],[64,-6],[74,6],[82,12],[48,8],[68,-2]].map(r => '<rect x="' + r[0] + '" y="16" width="10" height="50" rx="2.5" fill="#FFD23F" ' + s2 + ' transform="rotate(' + r[1] + ' ' + (r[0]+5) + ' 60)"/>').join('') +
+    '<path d="M26 52h68l-9 54H35z" fill="#E8432E" ' + s3 + '/><path d="M26 52c10 8 58 8 68 0" fill="none" ' + s3 + '/>' +
+    '<path d="M60 70l4 8 9 1-6 6 2 9-9-4-8 4 2-9-6-6 9-1z" fill="#FFD23F" ' + s2 + '/>' +
+    '<path d="M36 64l3 30" stroke="#FF8A7A" stroke-width="3.5" stroke-linecap="round"/>'),
+  haehnchen: svg('<ellipse cx="60" cy="100" rx="44" ry="10" fill="#FFFFFF" ' + s3 + '/>' +
+    '<path d="M56 72l22 20" stroke="' + O + '" stroke-width="14" stroke-linecap="round"/><path d="M56 72l22 20" stroke="#FFF6E4" stroke-width="8" stroke-linecap="round"/>' +
+    '<circle cx="84" cy="90" r="7" fill="#FFF6E4" ' + s3 + '/><circle cx="78" cy="97" r="7" fill="#FFF6E4" ' + s3 + '/><path d="M76 89l6 6" stroke="#FFF6E4" stroke-width="7"/>' +
+    '<path d="M28 72c-12-24 6-52 33-52 22 0 36 20 29 38-5 14-18 21-32 23-12 2-24 0-30-9z" fill="#C8691F" ' + s3 + '/>' +
+    '<path d="M42 36c5-7 12-9 19-9" fill="none" stroke="#F2A65A" stroke-width="4.5" stroke-linecap="round"/>' +
+    '<path d="M40 58h.1M54 50h.1M66 62h.1M50 68h.1" stroke="#8E4512" stroke-width="3.5" stroke-linecap="round"/>'),
+  spaetzle: svg('<path d="M14 56h92c0 26-21 42-46 42S14 82 14 56z" fill="#3B7DD8" ' + s3 + '/>' +
+    '<path d="M26 74c10 4 58 4 68 0" fill="none" stroke="#7FB0F0" stroke-width="3" stroke-linecap="round"/>' +
+    '<ellipse cx="60" cy="56" rx="46" ry="12" fill="#FFD45C" ' + s3 + '/>' +
+    '<path d="M28 54c4-4 8 3 12-1M44 60c4-4 8 3 12-1M58 52c4-4 8 3 12-1M72 59c4-4 8 3 12-1M36 46c4-3 8 2 12-1M64 46c4-3 8 2 12-1" fill="none" stroke="#DFA21F" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M40 40c4-6 12-6 14 0M62 38c4-6 12-6 14 0M50 34c3-4 9-4 10 0" fill="none" stroke="#8A4A24" stroke-width="4" stroke-linecap="round"/>' +
+    '<path d="M74 46l4-6M82 50l5-4M30 50l-2-6" stroke="#3DAA4A" stroke-width="3" stroke-linecap="round"/>'),
+  lasagne: svg('<ellipse cx="60" cy="98" rx="52" ry="12" fill="#FFFFFF" ' + s3 + '/>' +
+    '<path d="M76 56l22-18v38l-22 20z" fill="#E8B83A" ' + s3 + '/>' +
+    '<rect x="22" y="56" width="54" height="40" fill="#FFD45C" ' + s3 + '/>' +
+    '<path d="M22 66h54M22 76h54M22 86h54" stroke="#D8392B" stroke-width="5"/>' +
+    '<path d="M76 66l22-18M76 76l22-18M76 86l22-18" stroke="#C02E22" stroke-width="4"/>' +
+    '<path d="M22 56l22-18h54L76 56z" fill="#FFE38A" ' + s3 + '/>' +
+    '<g fill="#C9761E"><circle cx="46" cy="48" r="3"/><circle cx="62" cy="44" r="2.5"/><circle cx="74" cy="50" r="3"/><circle cx="56" cy="52" r="2"/></g>' +
+    '<path d="M86 42c2-4 6-5 9-4-1 4-5 6-9 4z" fill="#3DAA4A" ' + s2 + '/>'),
+  chili: svg('<path d="M14 56h92c0 26-21 42-46 42S14 82 14 56z" fill="#E07A2E" ' + s3 + '/>' +
+    '<path d="M24 76c8 6 64 6 72 0" fill="none" stroke="#F4A65E" stroke-width="3" stroke-linecap="round"/>' +
+    '<ellipse cx="60" cy="56" rx="46" ry="12" fill="#B8321F" ' + s3 + '/>' +
+    '<g fill="#5E2414" ' + s2.replace('2.4','1.6') + '><ellipse cx="38" cy="56" rx="4" ry="2.6"/><ellipse cx="52" cy="60" rx="4" ry="2.6"/><ellipse cx="76" cy="58" rx="4" ry="2.6"/><ellipse cx="86" cy="53" rx="4" ry="2.6"/></g>' +
+    '<g fill="#FFD23F"><rect x="44" y="50" width="4" height="4" rx="1"/><rect x="66" y="52" width="4" height="4" rx="1"/><rect x="30" y="52" width="4" height="4" rx="1"/></g>' +
+    '<path d="M54 48c4-6 16-6 18 0s-4 6-9 6-11-1-9-6z" fill="#FFFFFF" ' + s2 + '/>' +
+    '<path d="M84 18c10 2 16 12 14 24-6-8-14-12-20-14z" fill="#E8432E" ' + s2 + '/><path d="M84 18c-2-4 0-8 4-9" fill="none" stroke="#3DAA4A" stroke-width="3.5" stroke-linecap="round"/>'),
+  teller: svg('<circle cx="60" cy="62" r="40" fill="#FFFFFF" ' + s3 + '/><circle cx="60" cy="62" r="27" fill="#DCEBFA" ' + s2 + '/>' +
+    '<path d="M60 52c6 0 10 4 10 10s-4 10-10 10-10-4-10-10 4-10 10-10z" fill="#FFD45C" ' + s2 + '/>' +
+    '<path d="M12 30v20a5 5 0 0 0 10 0V30M17 50v46" fill="none" stroke="#9FA9B5" stroke-width="5" stroke-linecap="round"/>' +
+    '<path d="M104 30c-6 6-6 20 0 26v40" fill="none" stroke="#9FA9B5" stroke-width="5" stroke-linecap="round"/>')
+};
+const CATALOG = [
+  { key:'spaghetti', name:'Spaghetti', kw:['spaghetti','nudel','pasta','bolognese'] },
+  { key:'pizza', name:'Pizza', kw:['pizza'] },
+  { key:'pfannkuchen', name:'Pfannkuchen', kw:['pfannkuchen','pancake','eierkuchen','crêpe','crepe'] },
+  { key:'fisch', name:'Fischstäbchen', kw:['fisch','lachs'] },
+  { key:'burger', name:'Burger', kw:['burger'] },
+  { key:'suppe', name:'Suppe', kw:['suppe','eintopf'] },
+  { key:'wrap', name:'Wraps', kw:['wrap','tortilla','burrito','falafel','döner','doener'] },
+  { key:'schnitzel', name:'Schnitzel', kw:['schnitzel'] },
+  { key:'pommes', name:'Pommes', kw:['pommes','fritten'] },
+  { key:'haehnchen', name:'Hähnchen', kw:['hähnchen','haehnchen','hühnchen','huhn','chicken','nuggets'] },
+  { key:'spaetzle', name:'Käsespätzle', kw:['spätzle','spaetzle','maccaroni','makkaroni'] },
+  { key:'lasagne', name:'Lasagne', kw:['lasagne','auflauf'] },
+  { key:'chili', name:'Chili', kw:['chili'] }
+];
+function matchArt(text){
+  const t = (text || '').toLowerCase();
+  for (const c of CATALOG) if (c.kw.some(k => t.indexOf(k) >= 0)) return c;
+  return null;
+}
+function cleanWish(text){
+  let t = (text || '').trim().replace(/[.!?]+$/,'');
+  t = t.replace(/^(ich (will|möchte|wünsche mir|wünsch mir|hätte gern|hätte gerne)|wir (wollen|möchten)|bitte|mal wieder|können wir( mal wieder)?)\s+/i,'');
+  t = t.replace(/\s+(bitte|machen|essen|haben)$/i,'');
+  return t ? t[0].toUpperCase() + t.slice(1) : '';
+}
+function Art({ k, cls = 'art' }){
+  return html`<span class=${cls} dangerouslySetInnerHTML=${{ __html: ART[k] || ART.teller }}></span>`;
+}
+
+/* ---------- Konfiguration (einmalig eintragen) ---------- */
+const SUPABASE_URL = 'https://bwndvlljbrnhvckhjpqc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_aF5tnlL8kWn6H8UXVvYVHg_USb7r-ju';
+const CONFIGURED = SUPABASE_URL.indexOf('HIER_') !== 0 && SUPABASE_KEY.indexOf('HIER_') !== 0;
+
+/* ---------- Speicher (Supabase, geteilt, live) ---------- */
+const sb = CONFIGURED && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } }) : null;
+let resolveReady; const dbReady = new Promise(r => (resolveReady = r));
+const mem = { docs:{}, subs:new Set() };
+const memNotify = () => mem.subs.forEach(f => f());
+const colOf = p => p.split('/').slice(0,-1).join('/');
+function toast(msg){ window.dispatchEvent(new CustomEvent('fb-toast', { detail: msg })); }
+function dbErr(e){ console.error(e); toast('Konnte nicht speichern. Bitte Internet prüfen und nochmal versuchen.'); }
+async function loadAll(){
+  const { data, error } = await sb.from('docs').select('path,data');
+  if (error) throw error;
+  const d = {}; (data || []).forEach(r => (d[r.path] = r.data)); mem.docs = d; memNotify();
+}
+let channel = null;
+async function startSync(){
+  await loadAll();
+  if (!channel) channel = sb.channel('docs-live').on('postgres_changes', { event:'*', schema:'public', table:'docs' }, p => {
+    if (p.eventType === 'DELETE') { if (p.old && p.old.path) delete mem.docs[p.old.path]; }
+    else if (p.new && p.new.path) mem.docs[p.new.path] = p.new.data;
+    memNotify();
+  }).subscribe();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadAll().catch(() => {}); });
+  setInterval(() => loadAll().catch(() => {}), 120000);
+  resolveReady(true);
+}
+const S = {
+  watchDoc(p, cb){ const f = () => cb(mem.docs[p]); mem.subs.add(f); f(); return () => mem.subs.delete(f); },
+  watchCol(p, cb){
+    const f = () => cb(Object.keys(mem.docs).filter(k => colOf(k) === p).map(k => Object.assign({ id: k.split('/').pop() }, mem.docs[k])));
+    mem.subs.add(f); f(); return () => mem.subs.delete(f);
+  },
+  set(p, data){
+    mem.docs[p] = data; memNotify();
+    return sb.from('docs').upsert({ path: p, col: colOf(p), data, updated_at: new Date().toISOString() }).then(r => { if (r.error) dbErr(r.error); });
+  },
+  del(p){
+    delete mem.docs[p]; memNotify();
+    return sb.from('docs').delete().eq('path', p).then(r => { if (r.error) dbErr(r.error); });
+  },
+  add(col, data){
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+    return S.set(col + '/' + id, Object.assign({ createdAt: Date.now() }, data));
+  }
+};
+function useDoc(p){
+  const [v, setV] = useState(null); const [ready, setReady] = useState(false);
+  useEffect(() => { let un = () => {}, alive = true; setReady(false);
+    dbReady.then(() => { if (alive) un = S.watchDoc(p, d => { setV(d); setReady(true); }); });
+    return () => { alive = false; un(); }; }, [p]);
+  return ready ? (v || null) : undefined;
+}
+function useCol(p){
+  const [v, setV] = useState(undefined);
+  useEffect(() => { let un = () => {}, alive = true;
+    dbReady.then(() => { if (alive) un = S.watchCol(p, setV); });
+    return () => { alive = false; un(); }; }, [p]);
+  return v;
+}
+function useNow(){
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 20000); return () => clearInterval(t); }, []);
+  return now;
+}
+
+/* ---------- Screenshots lesen (über eigene Supabase-Funktion) ---------- */
+function sampleErr(e){
+  const c = e && e.code;
+  if (c === 'no_key') return 'Für das Bilderlesen fehlt noch der Schlüssel in Supabase (Anleitung Schritt 4).';
+  if (c === 'no_function') return 'Die Funktion zum Bilderlesen ist noch nicht eingerichtet (Anleitung Schritt 4).';
+  if (c === 'unauthorized') return 'Bitte neu anmelden.';
+  if (c === 'image_rejected') return 'Das Bild ließ sich nicht öffnen. Bitte einen Screenshot als JPG oder PNG wählen.';
+  if (c === 'invalid_json') return 'Im Bild wurde nichts Passendes erkannt. Bitte einen schärferen Screenshot versuchen.';
+  if (c === 'rate_limited') return 'Gerade zu viele Anfragen. Bitte in einer Minute nochmal versuchen.';
+  return 'Das Einlesen hat nicht geklappt. Bitte Internet prüfen und nochmal versuchen.';
+}
+function shrink(file){
+  return new Promise((res, rej) => {
+    const img = new Image(); const u = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1800, sc = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+      res(c.toDataURL('image/jpeg', 0.88).split(',')[1]);
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); rej({ code:'image_rejected' }); };
+    img.src = u;
+  });
+}
+function parseJson(t){
+  const s = String(t || '').trim();
+  try { return JSON.parse(s); } catch (e) {}
+  const f = s.match(/```(?:json)?\s*([\s\S]*?)```/); if (f) { try { return JSON.parse(f[1]); } catch (e) {} }
+  const a = s.search(/[\[{]/), b = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']'));
+  if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)); } catch (e) {} }
+  throw { code:'invalid_json' };
+}
+async function readImage(file, prompt){
+  const image = await shrink(file);
+  const { data, error } = await sb.functions.invoke('read-image', { body: { prompt: prompt + '\nAntworte ausschließlich mit dem JSON, ohne weiteren Text.', image, media_type: 'image/jpeg' } });
+  if (error) {
+    const st = error.context && error.context.status;
+    let body = null; try { body = error.context && await error.context.json(); } catch (e) {}
+    if (body && body.error) throw { code: body.error };
+    if (st === 404) throw { code:'no_function' };
+    if (st === 401) throw { code:'unauthorized' };
+    throw { code:'upstream_error' };
+  }
+  if (data && data.error) throw { code: data.error };
+  return parseJson(data && data.text);
+}
+
+/* ---------- Spracheingabe ---------- */
+function useVoice(onText){
+  const [on, setOn] = useState(false);
+  const [fallback, setFallback] = useState(false);
+  const rec = useRef(null);
+  const start = () => {
+    if (window.FamilienboardApp && window.FamilienboardApp.startSpeech){
+      window.onFamilienboardSpeech = t => { setOn(false); if (t) onText(t); };
+      try { window.FamilienboardApp.startSpeech(); setOn(true); setFallback(false); } catch (e) { setFallback(true); setOn(false); }
+      return;
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR){ setFallback(true); return; }
+    try {
+      const r = new SR(); r.lang = 'de-DE'; r.interimResults = false; r.maxAlternatives = 1;
+      r.onresult = e => { const t = e.results[0][0].transcript; if (t) onText(t); };
+      r.onerror = () => { setFallback(true); setOn(false); };
+      r.onend = () => setOn(false);
+      rec.current = r; r.start(); setOn(true); setFallback(false);
+    } catch (e) { setFallback(true); setOn(false); }
+  };
+  const stop = () => { try { rec.current && rec.current.stop(); } catch (e) {} setOn(false); };
+  return { on, fallback, toggle: () => (on ? stop() : start()), clearFallback: () => setFallback(false) };
+}
+function MicButton({ voice, label }){
+  return html`<button type="button" class=${'mic' + (voice.on ? ' on' : '')} onClick=${voice.toggle} aria-pressed=${voice.on} aria-label=${label}><${Icon} n="mic" size=${26} /></button>`;
+}
+function VoiceHint({ voice }){
+  if (voice.on) return html`<div class="hint warn" role="status">Ich höre zu … sprich einfach.</div>`;
+  if (voice.fallback) return html`<div class="hint warn" role="status">Tipp im Eingabefeld auf das Mikrofon deiner Tastatur und sprich – das klappt auf jedem Handy und Tablet.</div>`;
+  return null;
+}
+
+/* ---------- Bausteine ---------- */
+function Avatar({ id, size = 40, ring }){
+  return html`<span class="avatar" style=${'width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size*.42) + 'px;background:' + mt(id) + ';color:' + mc(id) + (ring ? ';border:3px solid ' + mc(id) : '')}>${ini(id)}</span>`;
+}
+function WhoPicker({ value, onChange, list = MEMBERS, label = 'Person' }){
+  return html`<div class="row" role="group" aria-label=${label} style="gap:8px">
+    ${list.map(m => html`<button type="button" class="avatar avatar-btn" aria-pressed=${value === m.id} aria-label=${m.name} title=${m.name}
+      style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (value === m.id ? mc(m.id) : 'transparent')}
+      onClick=${() => onChange(m.id)}>${m.id === 'familie' ? 'F' : m.name[0]}</button>`)}
+  </div>`;
+}
+function Sheet({ title, onClose, children, wide }){
+  useEffect(() => { const h = e => { if (e.key === 'Escape') onClose(); }; document.addEventListener('keydown', h); return () => document.removeEventListener('keydown', h); }, []);
+  return html`<div class="overlay" onClick=${e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div class=${'sheet' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label=${title}>
+      <div class="sh"><h2>${title}</h2><button type="button" class="iconbtn" aria-label="Schließen" onClick=${onClose}><${Icon} n="x" /></button></div>
+      ${children}
+    </div>
+  </div>`;
+}
+function FilePick({ file, setFile, label }){
+  const [url, setUrl] = useState(null);
+  useEffect(() => { if (!file) { setUrl(null); return; } const u = URL.createObjectURL(file); setUrl(u); return () => URL.revokeObjectURL(u); }, [file]);
+  return html`<div style="display:flex;flex-direction:column;gap:10px">
+    <label class="file"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange=${e => setFile(e.target.files && e.target.files[0] || null)} />
+      <${Icon} n="camera" size=${28} /><span>${file ? 'Anderes Bild wählen' : label}</span></label>
+    ${url ? html`<img class="shot" src=${url} alt="Gewählter Screenshot" />` : null}
+  </div>`;
+}
+
+/* ---------- HEUTE ---------- */
+function Heute({ now }){
+  const today = iso(now);
+  const routines = useDoc('config/routines');
+  const checks = useDoc('checks/' + today);
+  const points = useDoc('points/all');
+  const events = useCol('events') || [];
+  const exams = useCol('exams') || [];
+  const [mode, setMode] = useState(now.getHours() < 14 ? 'morgen' : 'abend');
+  const [edit, setEdit] = useState(false);
+  const r = routines || {};
+  const chips = events.filter(e => e.date === today).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
+  const soonExams = exams.filter(x => { const n = daysUntil(x.datum, now); return n >= 0 && n <= 3; }).sort((a,b) => a.datum.localeCompare(b.datum));
+
+  const toggle = (mid, i) => {
+    const k = mid + '-' + mode + '-' + i;
+    const c = Object.assign({}, checks || {}); const was = !!c[k]; c[k] = !was;
+    S.set('checks/' + today, c);
+    if (byId[mid].kid){ const p = Object.assign({}, points || {}); p[mid] = Math.max(0, (p[mid] || 0) + (was ? -1 : 1)); S.set('points/all', p); }
+  };
+  const setList = (mid, list) => {
+    const next = { morgen: Object.assign({}, r.morgen || {}), abend: Object.assign({}, r.abend || {}) };
+    next[mode][mid] = list; S.set('config/routines', next);
+  };
+  const morning = mode === 'morgen';
+  return html`
+    <div class="head">
+      <div><h1>${now.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}</h1>
+        <div class="sub">${morning ? 'Guten Morgen! Los geht’s.' : 'Guten Abend! Zeit zum Runterkommen.'}</div></div>
+      <div class="row" style="gap:16px">
+        <div class="seg" role="group" aria-label="Tageszeit">
+          <button type="button" aria-pressed=${morning} onClick=${() => setMode('morgen')}><${Icon} n="sun" size=${22} />Morgen</button>
+          <button type="button" aria-pressed=${!morning} onClick=${() => setMode('abend')}><${Icon} n="moon" size=${22} />Abend</button>
+        </div>
+        <button type="button" class=${'btn small ' + (edit ? '' : 'ghost')} onClick=${() => setEdit(!edit)} aria-pressed=${edit}><${Icon} n="edit" size=${18} />${edit ? 'Fertig' : 'Bearbeiten'}</button>
+        <div class="clock" aria-label="Uhrzeit">${pad(now.getHours())}:${pad(now.getMinutes())}</div>
+      </div>
+    </div>
+    ${(chips.length || soonExams.length) ? html`<a href="#kalender" class="todaychips" style="text-decoration:none;color:inherit">
+      <span class="sub" style="font-size:14px;font-weight:800">Heute & bald</span>
+      ${chips.map(e => html`<span class="tchip"><span class="dot" style=${'background:' + mc(e.who || 'familie')}></span>${e.time ? e.time + ' ' : ''}${e.title}</span>`)}
+      ${soonExams.map(x => html`<span class="tchip exam">${countdown(daysUntil(x.datum, now))}: ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span>`)}
+    </a>` : null}
+    ${routines === undefined ? html`<div class="loading">Routinen werden geladen …</div>` : html`
+    <div class="cols">
+      ${MEMBERS.map(m => {
+        const list = (r[mode] && r[mode][m.id]) || [];
+        const n = list.filter((t,i) => checks && checks[m.id + '-' + mode + '-' + i]).length;
+        const all = list.length > 0 && n === list.length;
+        return html`<section class="col" aria-label=${m.name}>
+          <div class="colhead">
+            <span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${m.name[0]}</span>
+            <div style="min-width:0"><div class="colname">${m.name}</div>
+              ${m.kid ? html`<div class="stars"><${Star} />${(points && points[m.id]) || 0} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}</div>`}</div>
+          </div>
+          ${list.map((t, i) => { const d = !!(checks && checks[m.id + '-' + mode + '-' + i]);
+            return html`<div style="display:flex;gap:6px;align-items:center">
+              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${() => toggle(m.id, i)}
+                style=${d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : ''}>
+                <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon} size=${28} color=${mc(m.id)} /></span>
+                <span class="lbl">${t.label}</span>
+                <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
+              </button>
+              ${edit ? html`<button type="button" class="iconbtn" aria-label=${t.label + ' entfernen'} onClick=${() => setList(m.id, list.filter((x,j) => j !== i))}><${Icon} n="x" size=${18} /></button>` : null}
+            </div>`; })}
+          ${edit ? html`<${AddTask} onAdd=${t => setList(m.id, list.concat([t]))} />` : null}
+          ${!list.length && !edit ? html`<div class="sub" style="font-size:14px">Keine Aufgaben. Über „Bearbeiten“ hinzufügen.</div>` : null}
+          <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:4px">
+            ${all ? html`<div class="done-badge" style=${'background:' + mt(m.id)}><${Star} size=${20} />Geschafft!</div>` : null}
+            <div class="progress" role="progressbar" aria-label=${'Fortschritt ' + m.name} aria-valuemin="0" aria-valuemax=${list.length} aria-valuenow=${n}><div style=${'width:' + (list.length ? Math.round(n/list.length*100) : 0) + '%;background:' + mc(m.id)}></div></div>
+            <div class="sub" style="font-size:13px;font-weight:700">${n} von ${list.length} erledigt</div>
+          </div>
+        </section>`;
+      })}
+    </div>`}`;
+}
+function AddTask({ onAdd }){
+  const [label, setLabel] = useState(''); const [icon, setIcon] = useState('star');
+  return html`<form style="display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:16px;background:var(--surface-2)" onSubmit=${e => { e.preventDefault(); if (!label.trim()) return; onAdd({ label: label.trim(), icon }); setLabel(''); }}>
+    <input class="input" style="height:42px" placeholder="Neue Aufgabe" value=${label} onInput=${e => setLabel(e.target.value)} aria-label="Neue Aufgabe" />
+    <div class="iconpick" role="group" aria-label="Symbol">${TASK_ICONS.map(k => html`<button type="button" aria-pressed=${icon === k} aria-label=${'Symbol ' + k} onClick=${() => setIcon(k)}><${Icon} n=${k} size=${20} /></button>`)}</div>
+    <button class="btn small" type="submit"><${Icon} n="plus" size=${18} />Hinzufügen</button>
+  </form>`;
+}
+
+/* ---------- KALENDER ---------- */
+function Kalender({ now }){
+  const [off, setOff] = useState(0);
+  const [hidden, setHidden] = useState({});
+  const [sheet, setSheet] = useState(null);
+  const events = useCol('events');
+  const exams = useCol('exams') || [];
+  const mon = addDays(monday(now), off * 7);
+  const days = [0,1,2,3,4,5,6].map(i => addDays(mon, i));
+  const today = iso(now);
+  const visible = e => !hidden[e.who || 'familie'];
+  return html`
+    <div class="head">
+      <div><h1>Kalender · KW ${kw(mon)}</h1><div class="sub">${dm(days[0])} – ${dm(days[6])}${days[6].getFullYear()}</div></div>
+      <div class="row">
+        <button type="button" class="iconbtn" aria-label="Vorige Woche" onClick=${() => setOff(off-1)} style="background:var(--surface)"><${Icon} n="left" /></button>
+        <button type="button" class="btn small ghost" onClick=${() => setOff(0)}>Heute</button>
+        <button type="button" class="iconbtn" aria-label="Nächste Woche" onClick=${() => setOff(off+1)} style="background:var(--surface)"><${Icon} n="right" /></button>
+        <button type="button" class="btn small soft" onClick=${() => setSheet({ kind:'shot' })}><${Icon} n="camera" size=${18} />Per Screenshot</button>
+        <button type="button" class="btn small" onClick=${() => setSheet({ kind:'add', date: today })}><${Icon} n="plus" size=${18} />Termin</button>
+      </div>
+    </div>
+    <div class="row" role="group" aria-label="Personen ein- und ausblenden" style="gap:8px">
+      ${WHO.map(m => html`<button type="button" class="avatar avatar-btn" aria-pressed=${!hidden[m.id]} aria-label=${m.name + (hidden[m.id] ? ' einblenden' : ' ausblenden')} title=${m.name}
+        style=${'width:44px;height:44px;font-size:17px;background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + mc(m.id) + ';opacity:' + (hidden[m.id] ? .35 : 1)}
+        onClick=${() => setHidden(Object.assign({}, hidden, { [m.id]: !hidden[m.id] }))}>${m.id === 'familie' ? 'F' : m.name[0]}</button>`)}
+    </div>
+    ${events === undefined ? html`<div class="loading">Termine werden geladen …</div>` : html`
+    <div class="week">
+      ${days.map(d => { const ds = iso(d);
+        const evs = events.filter(e => e.date === ds && visible(e)).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
+        const ex = exams.filter(x => x.datum === ds && !hidden[x.kid]);
+        return html`<section class=${'day' + (ds === today ? ' today' : '')} aria-label=${d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}>
+          <div class="dayhead"><span>${WD[d.getDay()]}</span><span class="n">${d.getDate()}</span></div>
+          ${ex.map(x => html`<button type="button" class="ev exam" onClick=${() => { location.hash = 'schule'; }}><span class="t"><span class="dot" style=${'background:' + mc(x.kid)}></span>Schule</span><span class="x">Klassenarbeit ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span></button>`)}
+          ${evs.map(e => html`<button type="button" class="ev" style=${'background:' + mt(e.who || 'familie')} onClick=${() => setSheet({ kind:'detail', ev: e })}>
+            <span class="t"><span class="dot" style=${'background:' + mc(e.who || 'familie')}></span>${e.time ? e.time + (e.end ? '–' + e.end : '') : 'ganztags'}</span>
+            <span class="x">${e.title}</span></button>`)}
+          <button type="button" class="addday" onClick=${() => setSheet({ kind:'add', date: ds })} aria-label=${'Termin am ' + dm(d) + ' hinzufügen'}>+ Termin</button>
+        </section>`; })}
+    </div>`}
+    ${events && events.length === 0 ? html`<div class="empty"><strong>Noch keine Termine</strong>Tippe auf „Termin“ oder lies einen Elternbrief, eine Einladung oder einen Terminplan per Screenshot ein.</div>` : null}
+    <div class="sub" style="font-size:13px">Google Kalender wird angezeigt, sobald er verbunden ist. Bis dahin landen Termine hier im Familienkalender.</div>
+    ${sheet && sheet.kind === 'add' ? html`<${EventForm} date=${sheet.date} onClose=${() => setSheet(null)} />` : null}
+    ${sheet && sheet.kind === 'detail' ? html`<${EventDetail} ev=${sheet.ev} onClose=${() => setSheet(null)} />` : null}
+    ${sheet && sheet.kind === 'shot' ? html`<${EventImport} now=${now} onClose=${() => setSheet(null)} />` : null}`;
+}
+function EventForm({ date, onClose }){
+  const [f, setF] = useState({ title:'', date, time:'', end:'', who:'familie' });
+  const up = (k, v) => setF(Object.assign({}, f, { [k]: v }));
+  const save = e => { e.preventDefault(); if (!f.title.trim() || !f.date) return;
+    S.add('events', { title: f.title.trim(), date: f.date, time: f.time || null, end: f.end || null, who: f.who, source:'hand' }); onClose(); toast('Termin gespeichert'); };
+  return html`<${Sheet} title="Neuer Termin" onClose=${onClose}>
+    <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
+      <label class="field">Was?<input id="ev-title" value=${f.title} onInput=${e => up('title', e.target.value)} placeholder="z. B. Elternabend" /></label>
+      <div class="row" style="align-items:flex-end">
+        <label class="field" style="flex:1 1 160px">Datum<input id="ev-date" type="date" value=${f.date} onInput=${e => up('date', e.target.value)} /></label>
+        <label class="field" style="flex:1 1 110px">Von (leer = ganztags)<input id="ev-time" type="time" value=${f.time} onInput=${e => up('time', e.target.value)} /></label>
+        <label class="field" style="flex:1 1 110px">Bis<input id="ev-end" type="time" value=${f.end} onInput=${e => up('end', e.target.value)} /></label>
+      </div>
+      <div class="field">Für wen?<${WhoPicker} value=${f.who} onChange=${v => up('who', v)} list=${WHO} /></div>
+      <button class="btn" type="submit">Speichern</button>
+    </form>
+  <//>`;
+}
+function EventDetail({ ev, onClose }){
+  const [confirm, setConfirm] = useState(false);
+  return html`<${Sheet} title=${ev.title} onClose=${onClose}>
+    <div class="row"><${Avatar} id=${ev.who || 'familie'} size=${40} /><div><b>${fromIso(ev.date).toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</b>
+      <div class="sub" style="font-size:14px">${ev.time ? ev.time + (ev.end ? ' – ' + ev.end : '') + ' Uhr' : 'ganztags'} · ${byId[ev.who || 'familie'].name}</div></div></div>
+    ${ev.note ? html`<div>${ev.note}</div>` : null}
+    ${confirm ? html`<div class="row"><span style="font-weight:800">Wirklich löschen?</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => { S.del('events/' + ev.id); onClose(); }}>Löschen</button><button type="button" class="btn small ghost" onClick=${() => setConfirm(false)}>Abbrechen</button></div>`
+      : html`<button type="button" class="btn ghost" onClick=${() => setConfirm(true)}>Termin löschen</button>`}
+  <//>`;
+}
+function EventImport({ now, onClose }){
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [found, setFound] = useState(null);
+  const [pick, setPick] = useState({});
+  const run = async () => {
+    setBusy(true); setErr(''); setFound(null);
+    const prompt = 'Heute ist ' + iso(now) + ' (' + WD[now.getDay()] + '). Das Bild ist ein Screenshot oder Foto mit Terminen (z. B. Elternbrief, Einladung, Vereinsplan, Kalender, Nachricht). ' +
+      'Familie: Klaus (Papa), Helena (Mama), Dorothea (9, Schule), Marlene (6, Schule), Clemens (4). Lies alle Termine aus. ' +
+      'Antworte nur mit JSON: {"events":[{"title":string,"date":"YYYY-MM-DD","time":"HH:MM" oder null,"end":"HH:MM" oder null,"who":"klaus"|"helena"|"dorothea"|"marlene"|"clemens"|"familie","exam":boolean,"fach":string oder null,"note":string oder null}]}. ' +
+      'Regeln: Fehlt das Jahr, nimm das nächste Datum ab heute. "who" nur setzen, wenn eindeutig eine Person gemeint ist, sonst "familie". exam=true nur bei Klassenarbeit/Probe/Test/Schulaufgabe eines Kindes, dann "fach" = Schulfach. Titel kurz auf Deutsch. Keine Termine erfinden; wenn keine da sind: {"events":[]}.';
+    try {
+      const res = await readImage(file, prompt);
+      const list = (res && Array.isArray(res.events) ? res.events : []).filter(e => e && e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.date || ''))
+        .map(e => Object.assign({}, e, { who: byId[e.who] ? e.who : 'familie' }));
+      setFound(list); const p = {}; list.forEach((e,i) => p[i] = true); setPick(p);
+      if (!list.length) setErr('Im Bild wurden keine Termine gefunden.');
+    } catch (e) { setErr(sampleErr(e)); }
+    setBusy(false);
+  };
+  const save = () => {
+    let n = 0;
+    found.forEach((e,i) => { if (!pick[i]) return; n++;
+      if (e.exam && byId[e.who] && byId[e.who].school) S.add('exams', { kid: e.who, fach: e.fach || e.title, datum: e.date, thema: e.note || '' });
+      else S.add('events', { title: e.title, date: e.date, time: e.time || null, end: e.end || null, who: e.who, note: e.note || null, source:'screenshot' });
+    });
+    toast(n + (n === 1 ? ' Termin' : ' Termine') + ' gespeichert'); onClose();
+  };
+  return html`<${Sheet} title="Termine per Screenshot" onClose=${onClose} wide>
+    <${FilePick} file=${file} setFile=${f => { setFile(f); setFound(null); setErr(''); }} label="Screenshot oder Foto wählen (Elternbrief, Einladung, Plan …)" />
+    ${!found ? html`<button type="button" class="btn" disabled=${!file || busy} onClick=${run}>${busy ? 'Wird gelesen … (kann bis zu einer Minute dauern)' : 'Termine erkennen'}</button>` : null}
+    ${err ? html`<div class="hint warn" role="alert">${err}</div>` : null}
+    ${found && found.length ? html`<div class="list">
+      ${found.map((e,i) => html`<label class="check"><input type="checkbox" checked=${!!pick[i]} onChange=${ev => setPick(Object.assign({}, pick, { [i]: ev.target.checked }))} />
+        <span style="flex:1;min-width:0"><span style="display:block;font-size:16px;font-weight:800">${e.exam ? 'Klassenarbeit: ' : ''}${e.title}</span>
+        <span class="sub" style="font-size:14px">${fromIso(e.date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'long' })}${e.time ? ', ' + e.time + ' Uhr' : ', ganztags'} · ${byId[e.who].name}</span></span>
+        <${Avatar} id=${e.who} size=${32} /></label>`)}
+      <button type="button" class="btn" onClick=${save}>Ausgewählte übernehmen</button>
+    </div>` : null}
+  <//>`;
+}
+
+/* ---------- SCHULE ---------- */
+const TONES = { deutsch:0, mathe:1, mathematik:1, englisch:2, französisch:2, sachunterricht:3, hsu:3, sport:4, kunst:5, musik:6, religion:7, ethik:7, werken:7 };
+const toneOf = f => { const k = (f || '').toLowerCase().trim(); if (k in TONES) return TONES[k]; let h = 0; for (const c of k) h = (h * 31 + c.charCodeAt(0)) % 997; return h % 8; };
+function Schule({ now }){
+  const [kid, setKid] = useState('dorothea');
+  const tt = useDoc('timetables/' + kid);
+  const exams = useCol('exams');
+  const [sheet, setSheet] = useState(null);
+  const mon = monday(now);
+  const days = [0,1,2,3,4].map(i => addDays(mon, i));
+  const today = iso(now);
+  const kidExams = (exams || []).filter(x => x.kid === kid);
+  const subjects = tt ? Array.from(new Set([].concat.apply([], tt.days).filter(Boolean).filter(f => !/pause|frei/i.test(f)))) : [];
+  const upcoming = (exams || []).filter(x => daysUntil(x.datum, now) >= 0).sort((a,b) => a.datum.localeCompare(b.datum));
+  const blank = () => S.set('timetables/' + kid, { times:['8:00','8:45','9:50','10:35','11:30','12:15'], days:[0,1,2,3,4].map(() => [null,null,null,null,null,null]), updatedAt: Date.now() });
+  return html`
+    <div class="head">
+      <div><h1>Stundenplan</h1><div class="sub">KW ${kw(mon)} · ${dm(days[0])} – ${dm(days[4])}</div></div>
+      <div class="row" role="group" aria-label="Kind auswählen">
+        ${SCHOOL.map(m => html`<button type="button" aria-pressed=${kid === m.id} onClick=${() => setKid(m.id)}
+          style=${'display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 18px 6px 6px;border-radius:999px;font-size:17px;font-weight:800;color:var(--fg);background:' + (kid === m.id ? mt(m.id) : 'var(--surface)') + ';border:2px solid ' + (kid === m.id ? mc(m.id) : 'var(--line)')}>
+          <${Avatar} id=${m.id} size=${38} />${m.name}</button>`)}
+      </div>
+    </div>
+    <div class="split">
+      <div class="grow">
+        ${tt === undefined ? html`<div class="loading">Stundenplan wird geladen …</div>` : !tt ? html`
+          <div class="card"><div class="empty"><strong>Noch kein Stundenplan für ${byId[kid].name}</strong>
+            Mach ein Foto oder einen Screenshot vom Stundenplan – er wird automatisch eingelesen.
+            <div class="row" style="justify-content:center"><button type="button" class="btn" onClick=${() => setSheet({ kind:'shot' })}><${Icon} n="camera" size=${20} />Screenshot einlesen</button>
+            <button type="button" class="btn ghost" onClick=${blank}>Selbst eintragen</button></div></div></div>` : html`
+          <div class="card">
+            <div class="ovx"><div class="tt" style=${'grid-template-columns:64px repeat(5,minmax(96px,1fr));min-width:560px'}>
+              <div></div>
+              ${days.map(d => html`<div class=${'h' + (iso(d) === today ? ' today' : '')}><span style="font-size:17px">${WD[d.getDay()]}</span><span style="font-size:14px">${dm(d)}</span></div>`)}
+              ${tt.times.map((time, ri) => html`
+                <div class="tm"><span>${ri+1}.</span><small>${time}</small></div>
+                ${days.map((d, di) => { const f = (tt.days[di] || [])[ri];
+                  const ex = f && kidExams.some(x => x.datum === iso(d) && x.fach.toLowerCase() === f.toLowerCase());
+                  return html`<button type="button" class=${'cell' + (f ? '' : ' empty-cell') + (ex ? ' exam' : '')} style=${f ? 'background:var(--tone-' + toneOf(f) + ')' : ''}
+                    onClick=${() => setSheet({ kind:'cell', di, ri, f: f || '' })} aria-label=${WD[d.getDay()] + ' ' + (ri+1) + '. Stunde: ' + (f || 'frei')}>
+                    ${f || '–'}${ex ? html`<span class="badge">Arbeit</span>` : null}</button>`; })}`)}
+            </div></div>
+            <div class="row" style="justify-content:space-between">
+              <span class="sub" style="font-size:13px">Tippe auf eine Stunde, um sie zu ändern.</span>
+              <div class="row">
+                <button type="button" class="btn small ghost" onClick=${() => S.set('timetables/' + kid, Object.assign({}, tt, { times: tt.times.concat(['']), days: tt.days.map(d => (d || []).concat([null])) }))}>+ Stunde</button>
+                <button type="button" class="btn small soft" onClick=${() => setSheet({ kind:'shot' })}><${Icon} n="camera" size=${18} />Neu einlesen</button>
+              </div>
+            </div>
+          </div>`}
+      </div>
+      <aside>
+        <div class="card">
+          <h2 style="font-size:20px">Klassenarbeiten</h2>
+          ${exams === undefined ? html`<div class="loading">Lädt …</div>` : upcoming.length ? html`<div class="list">
+            ${upcoming.map(x => { const n = daysUntil(x.datum, now); const d = fromIso(x.datum);
+              return html`<div class="li"><${Avatar} id=${x.kid} size=${40} />
+                <div class="tx"><b>${x.fach}</b><span>${WD[d.getDay()]}, ${dm(d)}${x.thema ? ' · ' + x.thema : ''}</span></div>
+                <span class=${'count' + (n <= 2 ? ' soon' : '')}>${countdown(n)}</span>
+                <button type="button" class="iconbtn" aria-label=${x.fach + ' von ' + byId[x.kid].name + ' löschen'} onClick=${() => S.del('exams/' + x.id)}><${Icon} n="x" size=${18} /></button></div>`; })}
+          </div>` : html`<div class="sub" style="font-size:15px">Keine anstehenden Klassenarbeiten.</div>`}
+        </div>
+        <${ExamForm} kid=${kid} subjects=${subjects} now=${now} />
+      </aside>
+    </div>
+    ${sheet && sheet.kind === 'shot' ? html`<${TimetableImport} kid=${kid} onClose=${() => setSheet(null)} />` : null}
+    ${sheet && sheet.kind === 'cell' ? html`<${CellEdit} kid=${kid} tt=${tt} at=${sheet} subjects=${subjects} onClose=${() => setSheet(null)} />` : null}`;
+}
+function ExamForm({ kid, subjects, now }){
+  const [fach, setFach] = useState(''); const [datum, setDatum] = useState(iso(addDays(now, 7))); const [thema, setThema] = useState('');
+  useEffect(() => { setFach(''); }, [kid]);
+  const save = e => { e.preventDefault(); if (!fach.trim() || !datum) return;
+    S.add('exams', { kid, fach: fach.trim(), datum, thema: thema.trim() }); setThema(''); toast('Klassenarbeit eingetragen'); };
+  return html`<form class="card" onSubmit=${save}>
+    <h2 style="font-size:18px">Neue Klassenarbeit für ${byId[kid].name}</h2>
+    ${subjects.length ? html`<div class="row" role="group" aria-label="Fach" style="gap:6px">${subjects.map(s => html`<button type="button" class="chip" aria-pressed=${fach === s} onClick=${() => setFach(s)}>${s}</button>`)}</div>` : null}
+    <label class="field">Fach<input id="ex-fach" value=${fach} onInput=${e => setFach(e.target.value)} placeholder="z. B. Mathe" /></label>
+    <div class="row" style="align-items:flex-end">
+      <label class="field" style="flex:1 1 140px">Datum<input id="ex-date" type="date" value=${datum} onInput=${e => setDatum(e.target.value)} /></label>
+      <label class="field" style="flex:2 1 160px">Thema<input id="ex-thema" value=${thema} onInput=${e => setThema(e.target.value)} placeholder="z. B. Einmaleins" /></label>
+    </div>
+    <button class="btn" type="submit"><${Icon} n="plus" size=${20} />Eintragen</button>
+  </form>`;
+}
+function CellEdit({ kid, tt, at, subjects, onClose }){
+  const [v, setV] = useState(at.f); const [time, setTime] = useState(tt.times[at.ri] || '');
+  const save = val => { const days = tt.days.map(d => (d || []).slice()); days[at.di][at.ri] = val ? val.trim() : null;
+    const times = tt.times.slice(); times[at.ri] = time;
+    S.set('timetables/' + kid, Object.assign({}, tt, { days, times, updatedAt: Date.now() })); onClose(); };
+  return html`<${Sheet} title=${WD[at.di + 1] + ', ' + (at.ri + 1) + '. Stunde'} onClose=${onClose}>
+    <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${e => { e.preventDefault(); save(v); }}>
+      <label class="field">Fach<input id="cell-fach" value=${v} onInput=${e => setV(e.target.value)} placeholder="leer = frei" /></label>
+      ${subjects.length ? html`<div class="row" style="gap:6px">${subjects.map(s => html`<button type="button" class="chip" aria-pressed=${v === s} onClick=${() => setV(s)}>${s}</button>`)}</div>` : null}
+      <label class="field">Beginn dieser Stunde<input id="cell-time" value=${time} onInput=${e => setTime(e.target.value)} placeholder="z. B. 8:00" /></label>
+      <div class="row"><button class="btn" type="submit">Speichern</button><button type="button" class="btn ghost" onClick=${() => save('')}>Stunde frei</button></div>
+    </form>
+  <//>`;
+}
+function TimetableImport({ kid, onClose }){
+  const [file, setFile] = useState(null); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [res, setRes] = useState(null);
+  const run = async () => {
+    setBusy(true); setErr(''); setRes(null);
+    const prompt = 'Das Bild zeigt den Schul-Stundenplan eines Grundschulkindes (Montag bis Freitag). Lies ihn genau aus. ' +
+      'Antworte nur mit JSON: {"times":["8:00","8:45",...],"days":[[...],[...],[...],[...],[...]]}. ' +
+      '"times" = Beginn jeder Unterrichtsstunde (Zeile) von oben nach unten; sind keine Zeiten zu sehen, nimm "". ' +
+      '"days" = genau 5 Listen (Mo, Di, Mi, Do, Fr), jede so lang wie "times": Fachname kurz auf Deutsch (z. B. "Deutsch", "Mathe", "Sport", "Kunst") oder null, wenn frei. Pausen als eigene Zeilen weglassen. Höchstens 10 Zeilen.';
+    try {
+      const r = await readImage(file, prompt);
+      if (!r || !Array.isArray(r.times) || !Array.isArray(r.days) || !r.times.length) throw { code:'invalid_json' };
+      const n = Math.min(r.times.length, 10);
+      const days = [0,1,2,3,4].map(i => { const d = Array.isArray(r.days[i]) ? r.days[i] : []; return Array.from({ length: n }, (x, j) => (d[j] ? String(d[j]).trim() : null)); });
+      setRes({ times: r.times.slice(0, n).map(t => (t ? String(t) : '')), days });
+    } catch (e) { setErr(sampleErr(e)); }
+    setBusy(false);
+  };
+  return html`<${Sheet} title=${'Stundenplan einlesen · ' + byId[kid].name} onClose=${onClose} wide>
+    <${FilePick} file=${file} setFile=${f => { setFile(f); setRes(null); setErr(''); }} label="Foto oder Screenshot vom Stundenplan wählen" />
+    ${!res ? html`<button type="button" class="btn" disabled=${!file || busy} onClick=${run}>${busy ? 'Wird gelesen … (kann bis zu einer Minute dauern)' : 'Stundenplan erkennen'}</button>` : null}
+    ${err ? html`<div class="hint warn" role="alert">${err}</div>` : null}
+    ${res ? html`<div class="hint">Bitte kurz prüfen. Einzelne Stunden kannst du danach antippen und ändern.</div>
+      <div class="ovx"><div class="tt" style="grid-template-columns:56px repeat(5,minmax(90px,1fr));min-width:520px">
+        <div></div>${['Mo','Di','Mi','Do','Fr'].map(d => html`<div class="h">${d}</div>`)}
+        ${res.times.map((t, ri) => html`<div class="tm"><span>${ri+1}.</span><small>${t}</small></div>
+          ${res.days.map(d => html`<div class=${'cell' + (d[ri] ? '' : ' empty-cell')} style=${d[ri] ? 'background:var(--tone-' + toneOf(d[ri]) + ')' : ''}>${d[ri] || '–'}</div>`)}`)}
+      </div></div>
+      <div class="row"><button type="button" class="btn" onClick=${() => { S.set('timetables/' + kid, Object.assign({ updatedAt: Date.now() }, res)); toast('Stundenplan gespeichert'); onClose(); }}>Übernehmen</button>
+        <button type="button" class="btn ghost" onClick=${() => setRes(null)}>Nochmal einlesen</button></div>` : null}
+  <//>`;
+}
+
+/* ---------- EINKAUF ---------- */
+const QUICK = ['Milch','Brot','Eier','Butter','Bananen','Äpfel','Joghurt','Nudeln','Käse','Klopapier'];
+function Einkauf(){
+  const items = useCol('shopping');
+  const [who, setWho] = useState('helena');
+  const [text, setText] = useState('');
+  const [heard, setHeard] = useState('');
+  const inputRef = useRef(null);
+  const addMany = names => names.forEach(n => S.add('shopping', { name: n, by: who, done: false }));
+  const splitWords = t => t.replace(/^(wir brauchen( noch)?|ich brauche|bitte|kauf( mal)?)\s+/i,'').split(/,|\bund\b|\bsowie\b/i).map(s => s.trim().replace(/[.!?]+$/,'')).filter(Boolean).map(s => s[0].toUpperCase() + s.slice(1));
+  const voice = useVoice(t => { const list = splitWords(t); addMany(list); setHeard('„' + t + '“ → ' + list.join(', ') + ' hinzugefügt'); });
+  useEffect(() => { if (voice.fallback && inputRef.current) inputRef.current.focus(); }, [voice.fallback]);
+  const add = e => { e && e.preventDefault(); const list = splitWords(text); if (!list.length) return; addMany(list); setText(''); voice.clearFallback(); };
+  const all = (items || []).slice().sort((a,b) => (a.createdAt || 0) - (b.createdAt || 0));
+  const open = all.filter(i => !i.done), done = all.filter(i => i.done);
+  const flip = i => { const body = Object.assign({}, i); delete body.id; body.done = !i.done; S.set('shopping/' + i.id, body); };
+  const Row = (i) => html`<div class=${'item' + (i.done ? ' done' : '')}>
+    <button type="button" class="main-tap" aria-pressed=${!!i.done} onClick=${() => flip(i)}>
+      <span class="circle">${i.done ? html`<${Icon} n="check" size=${16} sw=${3} color="var(--accent-fg)" />` : null}</span>
+      <span class="nm">${i.name}</span></button>
+    ${byId[i.by] ? html`<${Avatar} id=${i.by} size=${28} />` : null}
+    <button type="button" class="iconbtn" aria-label=${i.name + ' entfernen'} onClick=${() => S.del('shopping/' + i.id)}><${Icon} n="x" size=${18} /></button>
+  </div>`;
+  return html`
+    <div class="head"><div><h1>Einkaufsliste</h1><div class="sub">${open.length} ${open.length === 1 ? 'Sache' : 'Sachen'} offen · auf allen Geräten gleich</div></div></div>
+    <div class="split">
+      <div class="grow">
+        <form class="row" style="flex-wrap:nowrap" onSubmit=${add}>
+          <label style="flex:1;min-width:0;display:flex"><span class="sr">Neuer Eintrag</span>
+            <input ref=${inputRef} id="shop-new" class="input" style="height:56px;font-size:18px" value=${text} onInput=${e => setText(e.target.value)} placeholder="Was fehlt? (z. B. Milch, Eier und Brot)" /></label>
+          <${MicButton} voice=${voice} label="Per Sprache eintragen" />
+          <button class="btn" type="submit" style="min-height:56px" aria-label="Hinzufügen"><${Icon} n="plus" size=${22} /></button>
+        </form>
+        <${VoiceHint} voice=${voice} />
+        ${heard && !voice.on ? html`<div class="hint" role="status">${heard}</div>` : null}
+        <div class="card">
+          ${items === undefined ? html`<div class="loading">Liste wird geladen …</div>` : !open.length ? html`<div class="empty"><strong>Alles da!</strong>Neue Sachen oben eintippen, sagen oder rechts antippen.</div>` : html`<div class="shop">${open.map(Row)}</div>`}
+          ${done.length ? html`<div class="row" style="justify-content:space-between;margin-top:4px"><h2 style="font-size:15px;color:var(--muted)">Im Wagen</h2>
+            <button type="button" class="btn small ghost" onClick=${() => done.forEach(i => S.del('shopping/' + i.id))}>Erledigte entfernen</button></div>
+            <div class="shop">${done.map(Row)}</div>` : null}
+        </div>
+      </div>
+      <aside>
+        <div class="card"><h2 style="font-size:18px">Wer trägt ein?</h2><${WhoPicker} value=${who} onChange=${setWho} /></div>
+        <div class="card"><h2 style="font-size:18px">Schnell hinzufügen</h2>
+          <div class="row" style="gap:8px">${QUICK.map(q => html`<button type="button" class="chip" onClick=${() => addMany([q])}>+ ${q}</button>`)}</div></div>
+      </aside>
+    </div>`;
+}
+
+/* ---------- ESSEN ---------- */
+function Essen({ now }){
+  const [off, setOff] = useState(0);
+  const plan = useCol('mealplan');
+  const wishes = useCol('wishes');
+  const [who, setWho] = useState('clemens');
+  const [text, setText] = useState('');
+  const [heard, setHeard] = useState('');
+  const [day, setDay] = useState(null);
+  const inputRef = useRef(null);
+  const mon = addDays(monday(now), off * 7);
+  const days = [0,1,2,3,4,5,6].map(i => addDays(mon, i));
+  const today = iso(now);
+  const pm = {}; (plan || []).forEach(p => pm[p.id] = p);
+  const addWish = (raw, voiced) => { const c = matchArt(raw); const dish = c ? (cleanWish(raw).split(' ').length <= 3 ? cleanWish(raw) : c.name) : cleanWish(raw);
+    if (!dish) return null; S.add('wishes', { who, dish, art: c ? c.key : 'teller', voice: !!voiced }); return dish; };
+  const voice = useVoice(t => { const d = addWish(t, true); if (d) setHeard('„' + t + '“ → ' + d + ' als Wunsch von ' + byId[who].name + ' gespeichert'); });
+  useEffect(() => { if (voice.fallback && inputRef.current) inputRef.current.focus(); }, [voice.fallback]);
+  const wl = (wishes || []).slice().sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return html`
+    <div class="head">
+      <div><h1>Essensplan</h1><div class="sub">${dm(days[0])} – ${dm(days[6])} · Tag antippen zum Planen</div></div>
+      <div class="row">
+        <button type="button" class="iconbtn" aria-label="Vorige Woche" onClick=${() => setOff(off-1)} style="background:var(--surface)"><${Icon} n="left" /></button>
+        <button type="button" class="btn small ghost" onClick=${() => setOff(0)}>Diese Woche</button>
+        <button type="button" class="iconbtn" aria-label="Nächste Woche" onClick=${() => setOff(off+1)} style="background:var(--surface)"><${Icon} n="right" /></button>
+      </div>
+    </div>
+    <div class="split">
+      <div class="grow">
+        ${plan === undefined ? html`<div class="loading">Essensplan wird geladen …</div>` : html`<div class="meals">
+          ${days.map(d => { const ds = iso(d); const p = pm[ds];
+            return html`<button type="button" class=${'meal' + (ds === today ? ' today' : '')} onClick=${() => setDay(ds)} aria-label=${d.toLocaleDateString('de-DE', { weekday:'long' }) + ': ' + (p ? p.dish : 'noch nichts geplant')}>
+              <span class="mh"><span style=${ds === today ? 'color:var(--accent)' : ''}>${d.toLocaleDateString('de-DE', { weekday:'long' })}</span><small>${dm(d)}</small></span>
+              ${p ? html`<span class="pic"><${Art} k=${p.art} /></span><span class="dish">${p.dish}</span>
+                ${p.wishBy && byId[p.wishBy] ? html`<span class="row" style="gap:6px;font-size:13px;font-weight:800;color:var(--muted)"><${Avatar} id=${p.wishBy} size=${24} />Wunsch von ${byId[p.wishBy].name}</span>` : null}`
+                : html`<span class="pic none">+ Essen wählen</span>`}
+            </button>`; })}
+        </div>`}
+      </div>
+      <aside class="card" aria-label="Wunschbox">
+        <h2 style="font-size:20px">Wunschbox</h2>
+        <${WhoPicker} value=${who} onChange=${setWho} label="Wer wünscht sich was?" />
+        <form class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); if (addWish(text)) { setText(''); voice.clearFallback(); } }}>
+          <label style="flex:1;min-width:0;display:flex"><span class="sr">Wunsch</span><input ref=${inputRef} id="wish-new" class="input" value=${text} onInput=${e => setText(e.target.value)} placeholder=${byId[who].name + ', was möchtest du?'} /></label>
+          <${MicButton} voice=${voice} label=${byId[who].name + ': Wunsch sagen'} />
+        </form>
+        <${VoiceHint} voice=${voice} />
+        ${heard && !voice.on ? html`<div class="hint" role="status">${heard}</div>` : null}
+        <div class="sub" style="font-size:14px;font-weight:700">… oder Lieblingsessen antippen:</div>
+        <div class="foods">${CATALOG.slice(0, 12).map(c => html`<button type="button" class="food" aria-label=${c.name + ' wünschen'} onClick=${() => { S.add('wishes', { who, dish: c.name, art: c.key }); setHeard(c.name + ' als Wunsch von ' + byId[who].name + ' gespeichert'); }}><${Art} k=${c.key} /><span>${c.name}</span></button>`)}</div>
+        <h3 style="font-size:15px;color:var(--muted);margin-top:4px">Offene Wünsche</h3>
+        ${wishes === undefined ? html`<div class="loading">Lädt …</div>` : wl.length ? html`<div class="list">${wl.map(w => html`<div class="li">
+          <span class="thumb"><${Art} k=${w.art} /></span>
+          <div class="tx"><b>${w.dish}</b><span>${byId[w.who] ? byId[w.who].name : ''}${w.voice ? ' · gesprochen' : ''}</span></div>
+          <button type="button" class="iconbtn" aria-label=${'Wunsch ' + w.dish + ' entfernen'} onClick=${() => S.del('wishes/' + w.id)}><${Icon} n="x" size=${18} /></button></div>`)}</div>`
+          : html`<div class="sub" style="font-size:14px">Noch keine Wünsche.</div>`}
+      </aside>
+    </div>
+    ${day ? html`<${MealPick} ds=${day} cur=${pm[day]} wishes=${wl} onClose=${() => setDay(null)} />` : null}`;
+}
+function MealPick({ ds, cur, wishes, onClose }){
+  const [text, setText] = useState('');
+  const set = (dish, art, wish) => { S.set('mealplan/' + ds, { dish, art: art || 'teller', wishBy: wish ? wish.who : null }); if (wish) S.del('wishes/' + wish.id); onClose(); };
+  const d = fromIso(ds);
+  return html`<${Sheet} title=${'Essen am ' + d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })} onClose=${onClose} wide>
+    ${wishes.length ? html`<h3 style="font-size:16px">Aus der Wunschbox</h3><div class="list">${wishes.map(w => html`<button type="button" class="li" style="border:none;text-align:left;color:var(--fg)" onClick=${() => set(w.dish, w.art, w)}>
+      <span class="thumb"><${Art} k=${w.art} /></span><div class="tx"><b>${w.dish}</b><span>Wunsch von ${byId[w.who] ? byId[w.who].name : ''}</span></div><${Avatar} id=${w.who} size=${32} /></button>`)}</div>` : null}
+    <h3 style="font-size:16px">Lieblingsessen</h3>
+    <div class="foods" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">${CATALOG.map(c => html`<button type="button" class="food" onClick=${() => set(c.name, c.key)}><${Art} k=${c.key} /><span>${c.name}</span></button>`)}</div>
+    <form class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); const t = text.trim(); if (!t) return; const c = matchArt(t); set(t, c ? c.key : 'teller'); }}>
+      <label style="flex:1;min-width:0;display:flex"><span class="sr">Eigenes Gericht</span><input id="meal-own" class="input" value=${text} onInput=${e => setText(e.target.value)} placeholder="Eigenes Gericht, z. B. Gemüsecurry" /></label>
+      <button class="btn" type="submit">Planen</button>
+    </form>
+    ${cur ? html`<button type="button" class="btn ghost" onClick=${() => { S.del('mealplan/' + ds); onClose(); }}>Tag leeren</button>` : null}
+  <//>`;
+}
+
+/* ---------- Gerätecheck (z. B. für den Kühlschrank) ---------- */
+function Check(){
+  const [mic, setMic] = useState('nicht getestet');
+  const [said, setSaid] = useState('');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rows = [
+    ['Bildschirm', window.innerWidth + ' × ' + window.innerHeight + ' (' + (window.innerHeight > window.innerWidth ? 'Hochformat' : 'Querformat') + ')'],
+    ['Browser', navigator.userAgent],
+    ['Familienboard-App (APK)', window.FamilienboardApp ? 'ja – Sprache über Android' : 'nein'],
+    ['Spracherkennung im Browser', SR ? 'vorhanden' : 'fehlt'],
+    ['Mikrofon-Zugriff', navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? 'vorhanden' : 'fehlt'],
+    ['Live-Verbindung', 'WebSocket' in window ? 'ja' : 'nein'],
+    ['Anmeldung merken', (() => { try { localStorage.setItem('fb-t', '1'); localStorage.removeItem('fb-t'); return 'ja'; } catch (e) { return 'nein'; } })()]
+  ];
+  const testMic = async () => {
+    try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach(t => t.stop()); setMic('erlaubt'); }
+    catch (e) { setMic('verweigert (' + (e && e.name) + ')'); }
+  };
+  const testSpeech = () => {
+    if (window.FamilienboardApp) { window.onFamilienboardSpeech = t => setSaid(t ? 'Erkannt: „' + t + '“' : 'Nichts erkannt'); window.FamilienboardApp.startSpeech(); setSaid('Sprich jetzt …'); return; }
+    if (!SR) { setSaid('Spracherkennung fehlt in diesem Browser.'); return; }
+    try { const r = new SR(); r.lang = 'de-DE'; r.onresult = e => setSaid('Erkannt: „' + e.results[0][0].transcript + '“');
+      r.onerror = e => setSaid('Fehler: ' + e.error); r.start(); setSaid('Sprich jetzt …'); } catch (e) { setSaid('Fehler: ' + e.message); }
+  };
+  return html`<div class="head"><div><h1>Gerätecheck</h1><div class="sub">Zeigt, was dieses Gerät kann. Schick Claude ein Foto davon.</div></div></div>
+    <div class="card"><div class="list">${rows.map(r => html`<div class="li"><div class="tx"><b>${r[0]}</b><span style="white-space:normal">${r[1]}</span></div></div>`)}
+      <div class="li"><div class="tx"><b>Mikrofon-Test</b><span>${mic}</span></div><button type="button" class="btn small" onClick=${testMic}>Testen</button></div>
+      <div class="li"><div class="tx"><b>Sprach-Test</b><span style="white-space:normal">${said || 'nicht getestet'}</span></div><button type="button" class="btn small" onClick=${testSpeech}>Sprechen</button></div>
+    </div></div>
+    <a class="btn ghost" href="#heute">Zurück</a>`;
+}
+
+/* ---------- Anmeldung ---------- */
+function Login({ onDone }){
+  const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+  const go = async e => { e.preventDefault(); setBusy(true); setErr('');
+    const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pw });
+    setBusy(false); if (error) setErr('Anmeldung fehlgeschlagen. E-Mail und Passwort prüfen.'); else onDone(); };
+  return html`<div style="min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))">
+    <form class="card" style="width:100%;max-width:420px;gap:14px" onSubmit=${go}>
+      <div class="logo" style="margin:0"><${Icon} n="home" size=${28} sw=${2.2} /></div>
+      <h1 style="font-size:26px">Familienboard</h1>
+      <div class="sub" style="font-size:15px">Einmal anmelden – das Gerät bleibt danach angemeldet.</div>
+      <label class="field">E-Mail<input id="login-mail" type="email" autocomplete="username" value=${email} onInput=${e => setEmail(e.target.value)} /></label>
+      <label class="field">Passwort<input id="login-pw" type="password" autocomplete="current-password" value=${pw} onInput=${e => setPw(e.target.value)} /></label>
+      ${err ? html`<div class="hint warn" role="alert">${err}</div>` : null}
+      <button class="btn" type="submit" disabled=${busy}>${busy ? 'Anmelden …' : 'Anmelden'}</button>
+    </form></div>`;
+}
+
+/* ---------- App ---------- */
+const VIEWS = [
+  { id:'heute', label:'Heute', icon:'star' },
+  { id:'kalender', label:'Kalender', icon:'cal' },
+  { id:'schule', label:'Schule', icon:'school' },
+  { id:'einkauf', label:'Einkauf', icon:'cart' },
+  { id:'essen', label:'Essen', icon:'fork' }
+];
+function App(){
+  const fromHash = () => { const h = (location.hash || '').slice(1); return VIEWS.some(v => v.id === h) || h === 'check' ? h : 'heute'; };
+  const [view, setView] = useState(fromHash());
+  const [msg, setMsg] = useState('');
+  const [auth, setAuth] = useState(CONFIGURED && sb ? 'wait' : 'unconfigured');
+  const [ready, setReady] = useState(false);
+  const [loadErr, setLoadErr] = useState('');
+  const now = useNow();
+  useEffect(() => { const h = () => setView(fromHash()); window.addEventListener('hashchange', h); return () => window.removeEventListener('hashchange', h); }, []);
+  useEffect(() => { let t; const h = e => { setMsg(e.detail); clearTimeout(t); t = setTimeout(() => setMsg(''), 3200); }; window.addEventListener('fb-toast', h); return () => window.removeEventListener('fb-toast', h); }, []);
+  useEffect(() => { if (!sb) return; sb.auth.getSession().then(r => setAuth(r.data && r.data.session ? 'in' : 'out')); }, []);
+  useEffect(() => { if (auth !== 'in') return; startSync().then(() => setReady(true)).catch(e => { console.error(e); setLoadErr('Die Daten konnten nicht geladen werden. Ist die Tabelle angelegt (Anleitung Schritt 2)?'); }); }, [auth]);
+  useEffect(() => { const wake = () => { try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {} };
+    document.addEventListener('click', wake, { once: true }); }, []);
+  if (auth === 'unconfigured') return html`<div class="main"><div class="card"><h1 style="font-size:24px">Fast geschafft</h1>
+    <div>In der Datei <b>index.html</b> fehlen noch die Supabase-Adresse und der Schlüssel (Anleitung Schritt 3).</div></div>
+    ${view === 'check' ? html`<${Check} />` : html`<a class="btn ghost" href="#check">Gerätecheck öffnen</a>`}</div>`;
+  if (auth === 'wait') return html`<div class="loading" style="padding:24px">Familienboard wird geladen …</div>`;
+  if (auth === 'out') return html`<${Login} onDone=${() => setAuth('in')} />`;
+  const V = view === 'check' ? Check : { heute: Heute, kalender: Kalender, schule: Schule, einkauf: Einkauf, essen: Essen }[view];
+  return html`<div class="app">
+    <nav class="nav" aria-label="Hauptmenü">
+      <div class="logo"><${Icon} n="home" size=${28} sw=${2.2} /></div>
+      ${VIEWS.map(v => html`<a href=${'#' + v.id} aria-current=${view === v.id ? 'page' : undefined} onClick=${() => setView(v.id)}><${Icon} n=${v.icon} size=${26} />${v.label}</a>`)}
+      <div class="sync">${ready ? 'Synchron auf allen Geräten' : 'Verbinde …'}<br /><a href="#check" style="width:auto;padding:4px 0;font-size:11px;display:inline">Gerätecheck</a></div>
+    </nav>
+    <main class="main">
+      ${loadErr ? html`<div class="hint warn" role="alert">${loadErr}</div>` : null}
+      <${V} now=${now} />
+    </main>
+    ${msg ? html`<div class="toast" role="status">${msg}</div>` : null}
+  </div>`;
+}
+render(html`<${App} />`, document.getElementById('root'));
+})();
+</script>
+</body>
+</html>
