@@ -266,6 +266,26 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .claim{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
 .claimbtn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px;border-radius:20px;border:3px solid transparent;background:var(--surface-2);color:var(--fg);font-size:17px}
 .claimbtn[aria-pressed="true"]{border-color:var(--accent)}
+/* ---------- Sterne & Level ---------- */
+.lb{display:flex;flex-direction:column;gap:10px}
+.lbrow{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:20px;background:var(--surface);border:3px solid transparent;color:var(--fg);text-align:left;width:100%}
+.lbrow[aria-pressed="true"]{border-color:var(--accent)}
+.rank{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0;background:var(--surface-2);color:var(--muted)}
+.rank.r1{background:#F5C542;color:#5A4300}.rank.r2{background:#C9CFD8;color:#3A414C}.rank.r3{background:#D99A66;color:#4A2A10}
+.lbrow .lbx{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.lbrow .lbn{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:19px;font-weight:800}
+.lvl{font-size:13px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink)}
+.lbrow .lbs{display:flex;align-items:center;gap:6px;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;flex-shrink:0}
+.lbnext{font-size:13px;font-weight:700;color:var(--muted)}
+.ladder{display:flex;flex-direction:column;gap:8px}
+.step{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:var(--surface-2)}
+.step.locked{opacity:.55}
+.step .sn{width:46px;height:46px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;background:var(--surface);font-weight:800;font-size:15px;line-height:1.1}
+.step .sn small{font-size:10px;color:var(--muted)}
+.step.got .sn{background:var(--star);color:#3D2A00}
+.step .sx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.step .sx b{font-size:15px}.step .sx span{font-size:13px;color:var(--muted);font-weight:600}
+.claimed{font-size:13px;font-weight:800;color:var(--ok-ink);background:var(--ok-soft);padding:5px 10px;border-radius:999px;flex-shrink:0}
 </style>
 
 </head>
@@ -305,6 +325,36 @@ function kw(d){ const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.get
 const daysUntil = (s, now) => Math.round((fromIso(s) - fromIso(iso(now))) / 864e5);
 const countdown = n => n === 0 ? 'heute' : n === 1 ? 'morgen' : 'in ' + n + ' Tagen';
 
+/* ---------- Sterne, Level & Belohnungen ---------- */
+const LEVELS = [
+  { at:0, name:'Starter' },
+  { at:10, name:'Helfer', reward:'Lieblingsnachtisch aussuchen' },
+  { at:25, name:'Profi', reward:'30 Minuten länger aufbleiben' },
+  { at:50, name:'Held', reward:'Lieblingsessen für den Essensplan bestimmen' },
+  { at:80, name:'Superheld', reward:'Filmabend – du suchst den Film aus' },
+  { at:120, name:'Champion', reward:'Ausflug allein mit Mama oder Papa' },
+  { at:175, name:'Legende', reward:'Kleines Geschenk (Buch, Spiel …)' },
+  { at:250, name:'Meister', reward:'Wunsch-Tag: du planst den Tag' },
+  { at:350, name:'Großmeister', reward:'Großer Wunsch nach Absprache' }
+];
+const FAMILY_GOALS = [
+  { at:150, reward:'Pizza- und Spieleabend' },
+  { at:400, reward:'Familienausflug, z. B. Schwimmbad' },
+  { at:800, reward:'Großer Ausflug, z. B. Freizeitpark' }
+];
+const levelIdx = n => { let i = 0; LEVELS.forEach((l, k) => { if ((n || 0) >= l.at) i = k; }); return i; };
+const weekDoc = d => 'pointsweek/' + iso(monday(d || new Date()));
+let mem_ = null;
+/* Sterne vergeben: Gesamtstand + Wochenstand, mit Glückwunsch beim Levelaufstieg */
+function givePoints(points, deltas){
+  const p = Object.assign({}, points || {}); const wk = weekDoc(); const w = Object.assign({}, (mem_ && mem_.docs[wk]) || {});
+  Object.keys(deltas).forEach(id => { const d = deltas[id]; if (!d) return; const before = p[id] || 0;
+    p[id] = Math.max(0, before + d); w[id] = Math.max(0, (w[id] || 0) + d);
+    const a = levelIdx(before), b = levelIdx(p[id]);
+    if (b > a) setTimeout(() => toast('Level ' + (b + 1) + ' erreicht: ' + byId[id].name + ' ist jetzt ' + LEVELS[b].name + '!'), 600); });
+  S.set('points/all', p); S.set(wk, w);
+}
+
 /* ---------- Offene Aufgaben (für alle) ---------- */
 const REPEATS = [['none','Einmalig'],['weekly','Jede Woche'],['daily','Jeden Tag']];
 const isRep = t => t.repeat === 'weekly' || t.repeat === 'daily';
@@ -317,12 +367,12 @@ function todoOn(t, ds, today){
 }
 function claimTodo(t, ds, who, points){
   if (points === undefined) { toast('Einen Moment, Sterne werden noch geladen …'); return; }
-  const k = todoKey(t, ds); const done = Object.assign({}, t.done || {}); const prev = done[k]; const p = Object.assign({}, points || {}); const st = t.stars || 1;
-  if (prev) { p[prev] = Math.max(0, (p[prev] || 0) - st); delete done[k]; }
-  if (who) { done[k] = who; p[who] = (p[who] || 0) + st; }
+  const k = todoKey(t, ds); const done = Object.assign({}, t.done || {}); const prev = done[k]; const st = t.stars || 1; const dl = {};
+  if (prev) { dl[prev] = -st; delete done[k]; }
+  if (who) { done[k] = who; dl[who] = (dl[who] || 0) + st; }
   const body = Object.assign({}, t, { done }); delete body.id;
   if (k === 'once') body.doneOn = who ? ds : null;
-  S.set('todos/' + t.id, body); S.set('points/all', p);
+  S.set('todos/' + t.id, body); givePoints(points, dl);
 }
 const MON = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 const normTime = v => { const s = String(v || '').trim().replace(/[^\d:.]/g, ''); if (!s) return '';
@@ -385,6 +435,7 @@ const IC = {
   edit:'M4 20l4-1 11-11-3-3L5 16z',
   paw:'M8 13c-2 0-4 2-4 4s2 3 4 2 3-1 4-1 2 1 4 1 4 0 4-2-2-4-4-4-3 2-4 2-2-2-4-2zM7 9a1.5 2 0 1 0 0 .01M17 9a1.5 2 0 1 0 0 .01M10 6a1.5 2 0 1 0 0 .01M14 6a1.5 2 0 1 0 0 .01',
   bus:'M6 3h12a2 2 0 0 1 2 2v11H4V5a2 2 0 0 1 2-2zM4 10h16M7 16v3M17 16v3M8 13h.01M16 13h.01',
+  trophy:'M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 13v3M9 16h6v4H9zM7 20h10',
   music:'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zM20 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3z'
 };
 const TASK_ICONS = ['shirt','tooth','bed','bowl','shoe','bag','lunch','dish','bin','car','book','basket','fork','pencil','drop','moon','blocks','paw','music','star'];
@@ -544,6 +595,7 @@ async function startSync(){
   setInterval(() => loadAll().catch(() => {}), 120000);
   resolveReady(true);
 }
+mem_ = mem;
 const S = {
   watchDoc(p, cb){ const f = () => cb(mem.docs[p]); mem.subs.add(f); f(); return () => mem.subs.delete(f); },
   watchCol(p, cb){
@@ -833,7 +885,7 @@ function Heute({ now }){
     const k = mid + '-' + mode + '-' + i;
     const c = Object.assign({}, checks || {}); const was = !!c[k]; c[k] = !was;
     S.set('checks/' + today, c);
-    if (byId[mid].kid){ const p = Object.assign({}, points || {}); p[mid] = Math.max(0, (p[mid] || 0) + (was ? -1 : 1)); S.set('points/all', p); }
+    if (byId[mid].kid) givePoints(points, { [mid]: was ? -1 : 1 });
   };
   const setList = (mid, list) => {
     const next = { morgen: Object.assign({}, r.morgen || {}), abend: Object.assign({}, r.abend || {}) };
@@ -1376,12 +1428,94 @@ function Login({ onDone }){
 }
 
 /* ---------- App ---------- */
+function Sterne({ now }){
+  const points = useDoc('points/all');
+  const week = useDoc(weekDoc(now));
+  const claims = useDoc('rewards/claims');
+  const custom = useDoc('config/rewards');
+  const [mode, setMode] = useState('woche');
+  const [sel, setSel] = useState('dorothea');
+  const [edit, setEdit] = useState(false);
+  const P = points || {}, W = week || {}, C = claims || {}, R = custom || {};
+  const rw = l => ((R.levels || {})[l.at]) || l.reward;
+  const fr = g => ((R.family || {})[g.at]) || g.reward;
+  const val = id => mode === 'woche' ? (W[id] || 0) : (P[id] || 0);
+  const ranked = MEMBERS.slice().sort((a, b) => val(b.id) - val(a.id) || (P[b.id] || 0) - (P[a.id] || 0));
+  let rk = 0, lastV = null; const ranks = ranked.map((m, i) => { const v = val(m.id); if (v !== lastV) { rk = i + 1; lastV = v; } return rk; });
+  const total = MEMBERS.reduce((s, m) => s + (P[m.id] || 0), 0);
+  const nextGoal = FAMILY_GOALS.find(g => total < g.at);
+  const prevGoalAt = FAMILY_GOALS.filter(g => total >= g.at).reduce((s, g) => g.at, 0);
+  const claim = (who, at) => { const c = Object.assign({}, C); c[who] = Object.assign({}, c[who] || {}, { [at]: iso(now) }); S.set('rewards/claims', c); toast('Belohnung eingelöst – viel Spaß!'); };
+  const unclaim = (who, at) => { const c = Object.assign({}, C); c[who] = Object.assign({}, c[who] || {}); delete c[who][at]; S.set('rewards/claims', c); };
+  const sp = P[sel] || 0; const si = levelIdx(sp);
+  if (points === undefined) return html`<div class="loading">Sterne werden geladen …</div>`;
+  return html`
+    <div class="head">
+      <div><h1>Sterne & Level</h1><div class="sub">Sterne gibt es für Routinen und für Aufgaben für alle.</div></div>
+      <div class="row">
+        <div class="seg" role="group" aria-label="Zeitraum">
+          <button type="button" aria-pressed=${mode === 'woche'} onClick=${() => setMode('woche')}>Diese Woche</button>
+          <button type="button" aria-pressed=${mode === 'gesamt'} onClick=${() => setMode('gesamt')}>Insgesamt</button>
+        </div>
+        <button type="button" class="btn small ghost" onClick=${() => setEdit(true)}><${Icon} n="edit" size=${16} />Belohnungen</button>
+      </div>
+    </div>
+    <div class="split">
+      <div class="grow">
+        <div class="lb">${ranked.map((m, i) => { const tp = P[m.id] || 0; const li = levelIdx(tp); const nx = LEVELS[li + 1];
+          const pct = nx ? Math.round((tp - LEVELS[li].at) / (nx.at - LEVELS[li].at) * 100) : 100;
+          return html`<button type="button" class="lbrow" aria-pressed=${sel === m.id} onClick=${() => setSel(m.id)} aria-label=${'Platz ' + ranks[i] + ': ' + m.name + ', ' + val(m.id) + ' Sterne'}>
+            <span class=${'rank' + (val(m.id) > 0 && ranks[i] <= 3 ? ' r' + ranks[i] : '')}>${ranks[i]}</span>
+            <${Avatar} id=${m.id} size=${52} ring=${true} />
+            <span class="lbx">
+              <span class="lbn">${m.name}<span class="lvl">Level ${li + 1} · ${LEVELS[li].name}</span></span>
+              <span class="progress" style="height:12px"><span style=${'display:block;height:100%;border-radius:6px;width:' + pct + '%;background:' + mc(m.id)}></span></span>
+              <span class="lbnext">${nx ? 'Noch ' + (nx.at - tp) + ' bis Level ' + (li + 2) + ': ' + rw(nx) : 'Höchstes Level erreicht!'}</span>
+            </span>
+            <span class="lbs"><${Star} size=${28} />${val(m.id)}</span>
+          </button>`; })}</div>
+        <div class="card">
+          <h2 style="font-size:20px;display:flex;align-items:center;gap:8px"><${Icon} n="home" size=${22} />Familienziel</h2>
+          <div class="sub" style="font-size:14px">Alle sammeln zusammen: <b style="color:var(--fg)">${total} Sterne</b>${nextGoal ? ' · noch ' + (nextGoal.at - total) + ' bis „' + fr(nextGoal) + '“' : ' · alle Ziele geschafft!'}</div>
+          ${nextGoal ? html`<div class="progress" style="height:14px"><div style=${'width:' + Math.round((total - prevGoalAt) / (nextGoal.at - prevGoalAt) * 100) + '%;background:var(--star)'}></div></div>` : null}
+          <div class="ladder">${FAMILY_GOALS.map(g => { const got = total >= g.at; const c = (C.familie || {})[g.at];
+            return html`<div class=${'step' + (got ? ' got' : ' locked')}><span class="sn">${g.at}<small>Sterne</small></span>
+              <span class="sx"><b>${fr(g)}</b><span>${got ? (c ? 'Eingelöst am ' + fromIso(c).toLocaleDateString('de-DE') : 'Geschafft! Jetzt einlösen.') : 'Noch ' + (g.at - total) + ' Sterne'}</span></span>
+              ${got ? (c ? html`<button type="button" class="claimed" onClick=${() => unclaim('familie', g.at)} aria-label="Einlösen rückgängig">Eingelöst</button>` : html`<button type="button" class="btn small" onClick=${() => claim('familie', g.at)}>Einlösen</button>`) : null}</div>`; })}</div>
+        </div>
+      </div>
+      <aside>
+        <div class="card">
+          <div class="row"><${Avatar} id=${sel} size=${44} ring=${true} /><div><h2 style="font-size:20px">${byId[sel].name}</h2><div class="sub" style="font-size:14px">${sp} Sterne · Level ${si + 1} ${LEVELS[si].name}</div></div></div>
+          <div class="ladder">${LEVELS.slice(1).map((l, j) => { const got = sp >= l.at; const c = (C[sel] || {})[l.at]; const isNext = !got && levelIdx(sp) === j;
+            return html`<div class=${'step' + (got ? ' got' : isNext ? '' : ' locked')}><span class="sn">${j + 2}<small>${l.at} ★</small></span>
+              <span class="sx"><b>${l.name}: ${rw(l)}</b><span>${got ? (c ? 'Eingelöst am ' + fromIso(c).toLocaleDateString('de-DE') : 'Erreicht!') : 'Noch ' + (l.at - sp) + ' Sterne'}</span></span>
+              ${got ? (c ? html`<button type="button" class="claimed" onClick=${() => unclaim(sel, l.at)} aria-label="Einlösen rückgängig">Eingelöst</button>` : html`<button type="button" class="btn small" onClick=${() => claim(sel, l.at)}>Einlösen</button>`) : null}</div>`; })}</div>
+          <div class="sub" style="font-size:13px">Belohnungen lösen Mama oder Papa zusammen mit dem Kind ein. Gesammelte Sterne bleiben erhalten.</div>
+        </div>
+      </aside>
+    </div>
+    ${edit ? html`<${RewardEdit} R=${R} rw=${rw} fr=${fr} onClose=${() => setEdit(false)} />` : null}`;
+}
+function RewardEdit({ R, rw, fr, onClose }){
+  const [lv, setLv] = useState(() => { const o = {}; LEVELS.slice(1).forEach(l => o[l.at] = rw(l)); return o; });
+  const [fa, setFa] = useState(() => { const o = {}; FAMILY_GOALS.forEach(g => o[g.at] = fr(g)); return o; });
+  const save = () => { S.set('config/rewards', { levels: lv, family: fa }); toast('Belohnungen gespeichert'); onClose(); };
+  return html`<${Sheet} title="Belohnungen anpassen" onClose=${onClose} wide>
+    <div class="sub" style="font-size:14px">Trage ein, was es bei jedem Level gibt. Gilt für alle in der Familie.</div>
+    ${LEVELS.slice(1).map((l, j) => html`<label class="field">Level ${j + 2} · ${l.name} (ab ${l.at} Sternen)<input value=${lv[l.at]} onInput=${e => setLv(Object.assign({}, lv, { [l.at]: e.target.value }))} /></label>`)}
+    <h3 style="font-size:16px">Familienziele</h3>
+    ${FAMILY_GOALS.map(g => html`<label class="field">Ab ${g.at} Sternen zusammen<input value=${fa[g.at]} onInput=${e => setFa(Object.assign({}, fa, { [g.at]: e.target.value }))} /></label>`)}
+    <div class="row"><button type="button" class="btn" onClick=${save}>Speichern</button><button type="button" class="btn ghost" onClick=${onClose}>Abbrechen</button></div>
+  <//>`;
+}
 const VIEWS = [
   { id:'heute', label:'Heute', icon:'star' },
   { id:'kalender', label:'Kalender', icon:'cal' },
   { id:'schule', label:'Schule', icon:'school' },
   { id:'einkauf', label:'Einkauf', icon:'cart' },
-  { id:'essen', label:'Essen', icon:'fork' }
+  { id:'essen', label:'Essen', icon:'fork' },
+  { id:'sterne', label:'Sterne', icon:'trophy' }
 ];
 function App(){
   const fromHash = () => { const h = (location.hash || '').slice(1); return VIEWS.some(v => v.id === h) || h === 'check' ? h : 'heute'; };
@@ -1402,7 +1536,7 @@ function App(){
     ${view === 'check' ? html`<${Check} />` : html`<a class="btn ghost" href="#check">Gerätecheck öffnen</a>`}</div>`;
   if (auth === 'wait') return html`<div class="loading" style="padding:24px">Familienboard wird geladen …</div>`;
   if (auth === 'out') return html`<${Login} onDone=${() => setAuth('in')} />`;
-  const V = view === 'check' ? Check : { heute: Heute, kalender: Kalender, schule: Schule, einkauf: Einkauf, essen: Essen }[view];
+  const V = view === 'check' ? Check : { heute: Heute, kalender: Kalender, schule: Schule, einkauf: Einkauf, essen: Essen, sterne: Sterne }[view];
   return html`<div class="app">
     <nav class="nav" aria-label="Hauptmenü">
       <div class="logo"><${Icon} n="home" size=${28} sw=${2.2} /></div>
