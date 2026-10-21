@@ -1596,6 +1596,8 @@ function AddTask({ onAdd }){
 function Kalender({ now }){
   const [off, setOff] = useState(0);
   const [hidden, setHidden] = useState({});
+  const [onlyEv, setOnlyEv] = useState(() => { try { return localStorage.getItem('fb-cal-only') === '1'; } catch (e) { return false; } });
+  const setOnly = v => { setOnlyEv(v); try { localStorage.setItem('fb-cal-only', v ? '1' : '0'); } catch (e) {} };
   const [sheet, setSheet] = useState(null);
   const events = useCol('events');
   const exams = useCol('exams') || [];
@@ -1619,10 +1621,16 @@ function Kalender({ now }){
         <button type="button" class="btn small" onClick=${() => setSheet({ kind:'add', date: today })}><${Icon} n="plus" size=${18} />Termin</button>
       </div>
     </div>
+    <div class="row" style="justify-content:space-between;gap:10px">
     <div class="row" role="group" aria-label="Personen ein- und ausblenden" style="gap:8px">
       ${WHO.map(m => html`<button type="button" class="avatar avatar-btn" aria-pressed=${!hidden[m.id]} aria-label=${m.name + (hidden[m.id] ? ' einblenden' : ' ausblenden')} title=${m.name}
         style=${'width:44px;height:44px;font-size:17px;background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + mc(m.id) + ';opacity:' + (hidden[m.id] ? .35 : 1)}
         onClick=${() => setHidden(Object.assign({}, hidden, { [m.id]: !hidden[m.id] }))}>${m.id === 'familie' ? 'A' : m.name[0]}</button>`)}
+    </div>
+      <div class="seg" role="group" aria-label="Was anzeigen?">
+        <button type="button" aria-pressed=${!onlyEv} onClick=${() => setOnly(false)}><${Icon} n="check" size=${18} />Termine & Erledigtes</button>
+        <button type="button" aria-pressed=${onlyEv} onClick=${() => setOnly(true)}><${Icon} n="cal" size=${18} />Nur Termine</button>
+      </div>
     </div>
     ${events === undefined ? html`<div class="loading">Termine werden geladen …</div>` : html`
     <div class="week week3">
@@ -1634,10 +1642,10 @@ function Kalender({ now }){
           ${busesOn(d).filter(b => !hidden[b.kid]).map(b => html`<button type="button" class="ev busev" style=${'background:' + mt(b.kid)} onClick=${() => { location.hash = 'schule'; }}>
             <span class="t"><span class="dot" style=${'background:' + mc(b.kid)}></span>${b.dep}${b.arr ? '–' + b.arr : ''}</span>
             <span class="x">${b.car ? 'Ohne Bus' : 'Bus'} · ${byId[b.kid].name}</span></button>`)}
-          ${todos.filter(t => todoOn(t, ds, today)).map(t => { const ws = whoOf(t, ds); const w = ws[0]; return html`<button type="button" class="ev todoev" style=${w ? 'background:' + mt(w) : ''} onClick=${() => setSheet({ kind:'todo', t, ds })}>
+          ${onlyEv ? null : todos.filter(t => todoOn(t, ds, today) && whoOf(t, ds).some(x => !hidden[x])).map(t => { const ws = whoOf(t, ds); const w = ws.find(x => !hidden[x]) || ws[0]; return html`<button type="button" class="ev todoev" style=${w ? 'background:' + mt(w) : ''} onClick=${() => setSheet({ kind:'todo', t, ds })}>
             <span class="t">${w ? html`<span class="dot" style=${'background:' + mc(w)}></span>erledigt · ${names(ws)}` : 'Aufgabe für alle'}${t.slot ? ' · ' + SLOTS[slotIdx(t.slot)].adv : ''}</span><span class="x">${t.title}</span></button>`; })}
-          ${ptasks.filter(t => !hidden[t.who] && (t.every ? (t.lastDone === ds || (ds >= today && ds === (nextDue(t.lastDone, t.every, t.date) < today ? today : nextDue(t.lastDone, t.every, t.date))) ) : t.date === ds)).map(t => html`<button type="button" class="ev ptev" style=${'background:' + mt(t.who)} onClick=${() => setSheet({ kind:'pt', t })}>
-            <span class="t"><span class="dot" style=${'background:' + mc(t.who)}></span>${t.every ? (t.lastDone === ds ? 'erledigt' : everyTxt(t.every)) : t.done ? 'erledigt' : 'Aufgabe'}${t.slot ? ' ' + SLOTS[slotIdx(t.slot)].adv : ''} · ${byId[t.who].name}</span><span class="x">${t.label}</span></button>`)}
+          ${onlyEv ? null : ptasks.filter(t => !hidden[t.who] && (t.every ? (t.lastDone === ds || (t.done && t.doneOn === ds)) : t.done && (t.doneOn || t.date) === ds)).map(t => html`<button type="button" class="ev ptev" style=${'background:' + mt(t.who)} onClick=${() => setSheet({ kind:'pt', t })}>
+            <span class="t"><span class="dot" style=${'background:' + mc(t.who)}></span>erledigt${t.slot ? ' ' + SLOTS[slotIdx(t.slot)].adv : ''} · ${byId[t.who].name}</span><span class="x">${t.label}</span></button>`)}
           ${ex.map(x => html`<button type="button" class="ev exam" onClick=${() => { location.hash = 'schule'; }}><span class="t"><span class="dot" style=${'background:' + mc(x.kid)}></span>Schule</span><span class="x">Klassenarbeit ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span></button>`)}
           ${evs.map(e => html`<button type="button" class="ev" style=${'background:' + mt(e.who || 'familie')} onClick=${() => setSheet({ kind:'detail', ev: e, ds })}>
             <span class="t"><span class="dot" style=${'background:' + mc(e.who || 'familie')}></span>${e.time ? e.time + (e.end ? '–' + e.end : '') : 'ganztags'}</span>
