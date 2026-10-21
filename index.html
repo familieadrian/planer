@@ -349,6 +349,17 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 @media (min-width:560px) and (max-width:820px){ .cols{grid-template-columns:repeat(3,minmax(0,1fr))} }
 @media (max-width:340px){ .cols{grid-template-columns:1fr} }
 .col .progress{height:8px}
+/* ---------- Essensplan mit drei Mahlzeiten ---------- */
+.meal{padding:10px;gap:6px}
+.mslot{display:flex;flex-direction:column;gap:4px;border:none;border-radius:14px;background:var(--food-bg);padding:7px 8px;text-align:left;color:var(--fg);min-width:0}
+.mslot.empty{background:transparent;border:2px dashed var(--food-line)}
+.mslot .ml{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:var(--muted)}
+.mitems{display:flex;flex-direction:column;gap:4px}
+.mitem{display:flex;align-items:center;gap:6px;min-width:0}
+.mthumb{width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.mthumb .art{width:100%}
+.mdish{flex:1;min-width:0;font-size:14px;font-weight:800;line-height:1.2;overflow-wrap:break-word;hyphens:auto}
+.mplus{font-size:13px;font-weight:800;color:var(--muted)}
 </style>
 
 </head>
@@ -562,6 +573,7 @@ async function needPin(who, why, superOnly){ if (!byId[who] || (!hasPin(who) && 
 /* ---------- Offene Aufgaben (für alle) ---------- */
 const REPEATS = [['none','Einmalig'],['weekly','Jede Woche'],['daily','Jeden Tag'],['interval','Alle … Wochen']];
 const EVERY = [1,2,3,4,6,8];
+const daysTxt = ds => { const k = ds.slice().sort().join(''); return k === '12345' ? 'Mo–Fr' : k === '06' ? 'Sa & So' : ds.slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map(d => WD[d]).join(', '); };
 const everyTxt = n => n === 1 ? 'jede Woche' : 'alle ' + n + ' Wochen';
 const isRep = t => t.repeat === 'weekly' || t.repeat === 'daily' || t.repeat === 'interval';
 /* Intervall ohne festen Termin: erscheint wieder frühestens n Wochen nach dem letzten Erledigen */
@@ -1315,8 +1327,9 @@ function Heute({ now }){
       ${MEMBERS.map(m => {
         const list = (r[mode] && r[mode][m.id]) || [];
         const pts = ptasks.filter(t => t.who === m.id && (t.every ? (t.done && t.doneOn === today) || ((!t.date || t.date <= today) && (!t.lastDone || today >= nextDue(t.lastDone, t.every))) : t.slot ? t.slot === mode && t.date === rday : (t.done ? t.doneOn === today : t.date <= today))).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-        const n = list.filter((t,i) => checks && checks[m.id + '-' + mode + '-' + i]).length + pts.filter(t => t.done).length;
-        const tot = list.length + pts.length;
+        const dow = fromIso(rday).getDay(); const vis = t => !t.days || t.days.indexOf(dow) >= 0;
+        const n = list.filter((t,i) => vis(t) && checks && checks[m.id + '-' + mode + '-' + i]).length + pts.filter(t => t.done).length;
+        const tot = list.filter(vis).length + pts.length;
         const all = tot > 0 && n === tot;
         return html`<section class=${'col' + (drag && drag.over === m.id && drag.mid !== m.id ? ' dropover' : '')} data-mid=${m.id} aria-label=${m.name}>
           <div class="colhead">
@@ -1333,18 +1346,18 @@ function Heute({ now }){
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
               </button>
             </div>
-            ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockPT(t)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${16} />${t.lock ? 'Geschützt' : 'Schloss'}</button><button type="button" class="chip" aria-label=${t.label + ' löschen'} onClick=${() => delPT(t)}><${Icon} n="x" size=${16} />Löschen</button></div>` : null}`; })}
-          ${list.map((t, i) => { const d = !!(checks && checks[m.id + '-' + mode + '-' + i]);
+            ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockPT(t)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${16} />${t.lock ? 'Geschützt' : 'Schloss'}</button><button type="button" class="chip" aria-label=${t.label + ' löschen'} onClick=${() => delPT(t)}><${Icon} n="bin" size=${16} />Löschen</button></div>` : null}`; })}
+          ${list.map((t, i) => { if (!vis(t) && !edit) return null; const d = !!(checks && checks[m.id + '-' + mode + '-' + i]);
             return html`<div style="display:flex;gap:6px;align-items:center">
               <button type="button" class=${'task' + (drag && drag.mid === m.id && drag.i === i ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')}
                 onPointerDown=${e => startPress(e, m.id, i, t)} onContextMenu=${e => e.preventDefault()} onClick=${() => { if (skipClick.current) return; toggle(m.id, i); }}
                 style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : '') + (locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon} size=${28} color=${mc(m.id)} /></span>
-                <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}</span>
+                <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}${t.days ? html`<span class="when">${daysTxt(t.days)}</span>` : null}</span>
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
               </button>
             </div>
-            ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockTask(m.id, i)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${16} />${t.lock ? 'Geschützt' : 'Schloss'}</button><button type="button" class="chip" aria-label=${t.label + ' entfernen'} onClick=${() => delTask(m.id, i)}><${Icon} n="x" size=${16} />Löschen</button></div>` : null}`; })}
+            ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockTask(m.id, i)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${16} />${t.lock ? 'Geschützt' : 'Schloss'}</button><button type="button" class="chip" aria-label=${t.label + ' entfernen'} onClick=${() => delTask(m.id, i)}><${Icon} n="bin" size=${16} />Löschen</button></div>` : null}`; })}
           ${edit ? html`<${AddTask} onAdd=${t => setList(m.id, list.concat([t]))} />` : null}
           ${!list.length && !pts.length && !edit ? html`<div class="sub" style="font-size:14px">Keine Aufgaben. Mit + hinzufügen.</div>` : null}
           <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:4px">
@@ -1368,7 +1381,7 @@ function PersonTaskForm({ mid, mode0, r, onClose, init }){
   const I = init || {};
   const [label, setLabel] = useState(I.label || ''); const [icon, setIcon] = useState('star');
   const [when, setWhen] = useState(I.when || 'routine'); const [mds, setMds] = useState(I.mds && I.mds.length ? I.mds : [mode0]);
-  const [whos, setWhos] = useState(I.whos && I.whos.length ? I.whos : [mid]); const [lk, setLk] = useState(false); const [every, setEvery] = useState(I.every || 4);
+  const [whos, setWhos] = useState(I.whos && I.whos.length ? I.whos : [mid]); const [lk, setLk] = useState(false); const [every, setEvery] = useState(I.every || 4); const [wdays, setWdays] = useState([0,1,2,3,4,5,6]);
   const [date, setDate] = useState(I.date || iso(new Date()));
   const fromVoice = v => { const x = voiceToTask(v, mid, mode0); setLabel(x.label || label); if (x.whos) setWhos(x.whos); setWhen(x.when); setMds(x.mds); if (x.every) setEvery(x.every); if (x.date) setDate(x.date); };
   const flip = (arr, set, v) => set(arr.indexOf(v) >= 0 ? (arr.length > 1 ? arr.filter(x => x !== v) : arr) : arr.concat([v]));
@@ -1377,7 +1390,7 @@ function PersonTaskForm({ mid, mode0, r, onClose, init }){
   const save = e => { e.preventDefault(); const l = label.trim(); if (!l || (when !== 'interval' && !slotsSel.length)) return;
     const nm = names(whos.length === MEMBERS.length ? [] : whos) || 'alle';
     if (when === 'routine') { const next = copyR(r);
-      whos.forEach(w => slotsSel.forEach(md => { next[md][w] = ((next[md] || {})[w] || []).concat([lk ? { label: l, icon, lock: true } : { label: l, icon }]); }));
+      whos.forEach(w => slotsSel.forEach(md => { next[md][w] = ((next[md] || {})[w] || []).concat([Object.assign({ label: l, icon }, lk ? { lock: true } : {}, wdays.length < 7 ? { days: wdays.slice().sort() } : {})]); }));
       S.set('config/routines', next);
       toast('„' + l + '“ steht jetzt jeden ' + slotsSel.map(md => SLOTS[slotIdx(md)].name).join(', ') + ' bei ' + (allOn ? 'allen' : nm)); }
     else if (when === 'interval') { whos.forEach(w => S.add('ptasks', Object.assign({ who: w, label: l, icon, date: iso(new Date()), every, done: false }, lk ? { lock: true } : {})));
@@ -1408,6 +1421,11 @@ function PersonTaskForm({ mid, mode0, r, onClose, init }){
       ${when === 'interval' ? html`<div class="field">Wie oft?<div class="row" style="gap:6px">${EVERY.map(n => html`<button type="button" class="chip" aria-pressed=${every === n} onClick=${() => setEvery(n)}>${everyTxt(n)}</button>`)}</div>
         <div class="sub" style="font-size:13px;font-weight:600">Ohne festen Termin: Die Aufgabe steht da, bis sie erledigt ist. Danach taucht sie frühestens ${everyTxt(every).replace('alle ', 'nach ').replace('jede Woche', 'nach 1 Woche')} wieder auf.</div></div>` : null}
       ${when === 'once' ? html`<${DateField} label="An welchem Tag?" value=${date} onChange=${setDate} />` : null}
+      ${when === 'routine' ? html`<div class="field">An welchen Tagen?<div class="row" style="gap:6px">
+          <button type="button" class="chip" aria-pressed=${wdays.length === 7} onClick=${() => setWdays([0,1,2,3,4,5,6])}>Jeden Tag</button>
+          <button type="button" class="chip" aria-pressed=${wdays.slice().sort().join('') === '12345'} onClick=${() => setWdays([1,2,3,4,5])}>Mo–Fr</button>
+          <button type="button" class="chip" aria-pressed=${wdays.slice().sort().join('') === '06'} onClick=${() => setWdays([0,6])}>Wochenende</button>
+          ${[1,2,3,4,5,6,0].map(dd => html`<button type="button" class="chip" style="min-width:44px" aria-pressed=${wdays.indexOf(dd) >= 0 && wdays.length < 7} onClick=${() => setWdays(wdays.length === 7 ? [dd] : wdays.indexOf(dd) >= 0 ? (wdays.length > 1 ? wdays.filter(x => x !== dd) : wdays) : wdays.concat([dd]))}>${WD[dd]}</button>`)}</div></div>` : null}
       ${when === 'interval' ? null : html`<div class="field">Wann am Tag? (mehrere antippen möglich)<div class="row" style="gap:6px">
         ${SLOTS.map(x => slotChip(x.id, x.adv[0].toUpperCase() + x.adv.slice(1) + ' (' + x.from + (x.id === 'abend' ? '' : '–' + SLOTS[slotIdx(x.id) + 1].from) + ' Uhr)'))}
         ${when === 'once' ? slotChip('tag', 'Ganzer Tag') : null}</div></div>
@@ -1635,7 +1653,7 @@ function Schule({ now }){
               return html`<div class="li"><${Avatar} id=${x.kid} size=${40} />
                 <div class="tx"><b>${x.fach}</b><span>${WD[d.getDay()]}, ${dm(d)}${x.thema ? ' · ' + x.thema : ''}</span></div>
                 <span class=${'count' + (n <= 2 ? ' soon' : '')}>${countdown(n)}</span>
-                <button type="button" class="iconbtn" aria-label=${x.fach + ' von ' + byId[x.kid].name + ' löschen'} onClick=${() => S.del('exams/' + x.id)}><${Icon} n="x" size=${18} /></button></div>`; })}
+                <button type="button" class="iconbtn" aria-label=${x.fach + ' von ' + byId[x.kid].name + ' löschen'} onClick=${() => S.del('exams/' + x.id)}><${Icon} n="bin" size=${18} /></button></div>`; })}
           </div>` : html`<div class="sub" style="font-size:15px">Keine anstehenden Klassenarbeiten.</div>`}
         </div>
         <${BusCard} tt=${tt} kid=${kid} now=${now} />
@@ -1763,7 +1781,7 @@ function Einkauf(){
       <span class="circle">${i.done ? html`<${Icon} n="check" size=${16} sw=${3} color="var(--accent-fg)" />` : null}</span>
       <span class="nm">${i.name}</span></button>
     ${byId[i.by] ? html`<${Avatar} id=${i.by} size=${28} />` : null}
-    <button type="button" class="iconbtn" aria-label=${i.name + ' entfernen'} onClick=${() => S.del('shopping/' + i.id)}><${Icon} n="x" size=${18} /></button>
+    <button type="button" class="iconbtn" aria-label=${i.name + ' entfernen'} onClick=${() => S.del('shopping/' + i.id)}><${Icon} n="bin" size=${18} /></button>
   </div>`;
   return html`
     <div class="head"><div><h1>Einkaufsliste</h1><div class="sub">${open.length} ${open.length === 1 ? 'Sache' : 'Sachen'} offen · auf allen Geräten gleich</div></div></div>
@@ -1793,27 +1811,35 @@ function Einkauf(){
 }
 
 /* ---------- ESSEN ---------- */
+const MEALS = [{ id:'frueh', name:'Frühstück', icon:'sun' }, { id:'mittag', name:'Mittagessen', icon:'lunch' }, { id:'abend', name:'Abendessen', icon:'moon' }];
+const mealName = id => (MEALS.find(m => m.id === id) || { name: 'egal wann' }).name;
+/* Plan eines Tages: { frueh:[…], mittag:[…], abend:[…] } – alter Eintrag {dish} zählt als Abendessen */
+const dayPlan = p => { const o = { frueh: [], mittag: [], abend: [] }; if (!p) return o;
+  if (p.dish) o.abend = [{ dish: p.dish, art: p.art, by: p.wishBy || null }];
+  MEALS.forEach(m => { if (Array.isArray(p[m.id])) o[m.id] = p[m.id]; }); return o; };
+const savePlan = (ds, o) => { const empty = MEALS.every(m => !o[m.id].length); if (empty) S.del('mealplan/' + ds); else S.set('mealplan/' + ds, { frueh: o.frueh, mittag: o.mittag, abend: o.abend }); };
 function Essen({ now }){
   const [off, setOff] = useState(0);
   const plan = useCol('mealplan');
   const wishes = useCol('wishes');
   const [who, setWho] = useState('clemens');
+  const [wmeal, setWmeal] = useState('');
   const [text, setText] = useState('');
   const [heard, setHeard] = useState('');
-  const [day, setDay] = useState(null);
+  const [pick, setPick] = useState(null);
   const inputRef = useRef(null);
   const mon = addDays(monday(now), off * 7);
   const days = [0,1,2,3,4,5,6].map(i => addDays(mon, i));
   const today = iso(now);
   const pm = {}; (plan || []).forEach(p => pm[p.id] = p);
   const addWish = (raw, voiced) => { const c = matchArt(raw); const dish = c ? (cleanWish(raw).split(' ').length <= 3 ? cleanWish(raw) : c.name) : cleanWish(raw);
-    if (!dish) return null; S.add('wishes', { who, dish, art: c ? c.key : 'teller', voice: !!voiced }); return dish; };
+    if (!dish) return null; S.add('wishes', { who, dish, art: c ? c.key : 'teller', meal: wmeal || null, voice: !!voiced }); return dish; };
   const voice = useVoice(t => { const d = addWish(t, true); if (d) setHeard('„' + t + '“ → ' + d + ' als Wunsch von ' + byId[who].name + ' gespeichert'); });
   useEffect(() => { if (voice.fallback && inputRef.current) inputRef.current.focus(); }, [voice.fallback]);
   const wl = (wishes || []).slice().sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
   return html`
     <div class="head">
-      <div><h1>Essensplan</h1><div class="sub">${dm(days[0])} – ${dm(days[6])} · Tag antippen zum Planen</div></div>
+      <div><h1>Essensplan</h1><div class="sub">${dm(days[0])} – ${dm(days[6])} · Mahlzeit antippen zum Planen – auch mehrere Gerichte</div></div>
       <div class="row">
         <button type="button" class="iconbtn" aria-label="Vorige Woche" onClick=${() => setOff(off-1)} style="background:var(--surface)"><${Icon} n="left" /></button>
         <button type="button" class="btn small ghost" onClick=${() => setOff(0)}>Diese Woche</button>
@@ -1823,50 +1849,71 @@ function Essen({ now }){
     <div class="split">
       <div class="grow">
         ${plan === undefined ? html`<div class="loading">Essensplan wird geladen …</div>` : html`<div class="meals">
-          ${days.map(d => { const ds = iso(d); const p = pm[ds];
-            return html`<button type="button" class=${'meal' + (ds === today ? ' today' : '')} onClick=${() => setDay(ds)} aria-label=${d.toLocaleDateString('de-DE', { weekday:'long' }) + ': ' + (p ? p.dish : 'noch nichts geplant')}>
+          ${days.map(d => { const ds = iso(d); const dp = dayPlan(pm[ds]);
+            return html`<section class=${'meal' + (ds === today ? ' today' : '')} aria-label=${d.toLocaleDateString('de-DE', { weekday:'long' })}>
               <span class="mh"><span style=${ds === today ? 'color:var(--accent)' : ''}>${d.toLocaleDateString('de-DE', { weekday:'long' })}</span><small>${dm(d)}</small></span>
-              ${p ? html`<span class="pic"><${Art} k=${p.art} /></span><span class="dish">${p.dish}</span>
-                ${p.wishBy && byId[p.wishBy] ? html`<span class="row" style="gap:6px;font-size:13px;font-weight:800;color:var(--muted)"><${Avatar} id=${p.wishBy} size=${24} />Wunsch von ${byId[p.wishBy].name}</span>` : null}`
-                : html`<span class="pic none">+ Essen wählen</span>`}
-            </button>`; })}
+              ${MEALS.map(ml => { const items = dp[ml.id];
+                return html`<button type="button" class=${'mslot' + (items.length ? '' : ' empty')} onClick=${() => setPick({ ds, meal: ml.id })} aria-label=${ml.name + ': ' + (items.length ? items.map(x => x.dish).join(', ') : 'noch nichts')}>
+                  <span class="ml"><${Icon} n=${ml.icon} size=${14} />${ml.name}</span>
+                  ${items.length ? html`<span class="mitems">${items.map(x => html`<span class="mitem"><span class="mthumb"><${Art} k=${x.art} /></span><span class="mdish">${x.dish}</span>${x.by && byId[x.by] ? html`<${Avatar} id=${x.by} size=${20} />` : null}</span>`)}</span>`
+                    : html`<span class="mplus">+ planen</span>`}
+                </button>`; })}
+            </section>`; })}
         </div>`}
       </div>
       <aside class="card" aria-label="Wunschbox">
         <h2 style="font-size:20px">Wunschbox</h2>
+        <div class="sub" style="font-size:13px">Jedes Kind kann so viele Wünsche eintragen, wie es möchte.</div>
         <${WhoPicker} value=${who} onChange=${setWho} label="Wer wünscht sich was?" />
-        <form class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); if (addWish(text)) { setText(''); voice.clearFallback(); } }}>
+        <div class="row" role="group" aria-label="Für welche Mahlzeit?" style="gap:6px">
+          ${[{ id:'', name:'egal' }].concat(MEALS).map(m => html`<button type="button" class="chip" aria-pressed=${wmeal === m.id} onClick=${() => setWmeal(m.id)}>${m.id ? m.name : 'Egal wann'}</button>`)}
+        </div>
+        <form class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); if (addWish(text)) { setText(''); voice.clearFallback(); setHeard('Wunsch gespeichert'); } }}>
           <label style="flex:1;min-width:0;display:flex"><span class="sr">Wunsch</span><input ref=${inputRef} id="wish-new" class="input" value=${text} onInput=${e => setText(e.target.value)} placeholder=${byId[who].name + ', was möchtest du?'} /></label>
           <${MicButton} voice=${voice} label=${byId[who].name + ': Wunsch sagen'} />
         </form>
         <${VoiceHint} voice=${voice} />
         ${heard && !voice.on ? html`<div class="hint" role="status">${heard}</div>` : null}
         <div class="sub" style="font-size:14px;font-weight:700">… oder Lieblingsessen antippen:</div>
-        <div class="foods">${CATALOG.slice(0, 12).map(c => html`<button type="button" class="food" aria-label=${c.name + ' wünschen'} onClick=${() => { S.add('wishes', { who, dish: c.name, art: c.key }); setHeard(c.name + ' als Wunsch von ' + byId[who].name + ' gespeichert'); }}><${Art} k=${c.key} /><span>${c.name}</span></button>`)}</div>
+        <div class="foods">${CATALOG.slice(0, 12).map(c => html`<button type="button" class="food" aria-label=${c.name + ' wünschen'} onClick=${() => { S.add('wishes', { who, dish: c.name, art: c.key, meal: wmeal || null }); setHeard(c.name + ' als Wunsch von ' + byId[who].name + ' gespeichert'); }}><${Art} k=${c.key} /><span>${c.name}</span></button>`)}</div>
         <h3 style="font-size:15px;color:var(--muted);margin-top:4px">Offene Wünsche</h3>
         ${wishes === undefined ? html`<div class="loading">Lädt …</div>` : wl.length ? html`<div class="list">${wl.map(w => html`<div class="li">
           <span class="thumb"><${Art} k=${w.art} /></span>
-          <div class="tx"><b>${w.dish}</b><span>${byId[w.who] ? byId[w.who].name : ''}${w.voice ? ' · gesprochen' : ''}</span></div>
-          <button type="button" class="iconbtn" aria-label=${'Wunsch ' + w.dish + ' entfernen'} onClick=${() => S.del('wishes/' + w.id)}><${Icon} n="x" size=${18} /></button></div>`)}</div>`
+          <div class="tx"><b>${w.dish}</b><span>${byId[w.who] ? byId[w.who].name : ''}${w.meal ? ' · ' + mealName(w.meal) : ''}${w.voice ? ' · gesprochen' : ''}</span></div>
+          <button type="button" class="iconbtn" aria-label=${'Wunsch ' + w.dish + ' löschen'} onClick=${() => S.del('wishes/' + w.id)}><${Icon} n="bin" size=${18} /></button></div>`)}</div>`
           : html`<div class="sub" style="font-size:14px">Noch keine Wünsche.</div>`}
       </aside>
     </div>
-    ${day ? html`<${MealPick} ds=${day} cur=${pm[day]} wishes=${wl} onClose=${() => setDay(null)} />` : null}`;
+    ${pick ? html`<${MealPick} ds=${pick.ds} meal=${pick.meal} cur=${pm[pick.ds]} wishes=${wl} onClose=${() => setPick(null)} />` : null}`;
 }
-function MealPick({ ds, cur, wishes, onClose }){
+function MealPick({ ds, meal, cur, wishes, onClose }){
   const [text, setText] = useState('');
-  const set = (dish, art, wish) => { S.set('mealplan/' + ds, { dish, art: art || 'teller', wishBy: wish ? wish.who : null }); if (wish) S.del('wishes/' + wish.id); onClose(); };
+  const [ml, setMl] = useState(meal);
+  const [by, setBy] = useState(null);
+  const dp = dayPlan(cur);
+  const items = dp[ml];
+  const add = (dish, art, wish) => { const o = dayPlan(mem_.docs['mealplan/' + ds]); o[ml] = o[ml].concat([{ dish, art: art || 'teller', by: wish ? wish.who : by }]); savePlan(ds, o);
+    if (wish) S.del('wishes/' + wish.id); toast(dish + ' zum ' + mealName(ml) + ' eingeplant'); };
+  const del = i => { const o = dayPlan(mem_.docs['mealplan/' + ds]); o[ml] = o[ml].filter((x, j) => j !== i); savePlan(ds, o); };
   const d = fromIso(ds);
-  return html`<${Sheet} title=${'Essen am ' + d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })} onClose=${onClose} wide>
-    ${wishes.length ? html`<h3 style="font-size:16px">Aus der Wunschbox</h3><div class="list">${wishes.map(w => html`<button type="button" class="li" style="border:none;text-align:left;color:var(--fg)" onClick=${() => set(w.dish, w.art, w)}>
-      <span class="thumb"><${Art} k=${w.art} /></span><div class="tx"><b>${w.dish}</b><span>Wunsch von ${byId[w.who] ? byId[w.who].name : ''}</span></div><${Avatar} id=${w.who} size=${32} /></button>`)}</div>` : null}
+  const ws = wishes.slice().sort((a, b) => (b.meal === ml) - (a.meal === ml));
+  return html`<${Sheet} title=${d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })} onClose=${onClose} wide>
+    <div class="seg" role="group" aria-label="Mahlzeit">${MEALS.map(m => html`<button type="button" aria-pressed=${ml === m.id} onClick=${() => setMl(m.id)}><${Icon} n=${m.icon} size=${18} />${m.name}</button>`)}</div>
+    <div class="field">Geplant zum ${mealName(ml)}
+      ${items.length ? html`<div class="list">${items.map((x, i) => html`<div class="li"><span class="thumb"><${Art} k=${x.art} /></span>
+        <div class="tx"><b>${x.dish}</b><span>${x.by && byId[x.by] ? 'Wunsch von ' + byId[x.by].name : ''}</span></div>
+        <button type="button" class="iconbtn" aria-label=${x.dish + ' löschen'} onClick=${() => del(i)}><${Icon} n="bin" size=${18} /></button></div>`)}</div>`
+        : html`<div class="sub" style="font-size:14px">Noch nichts – unten antippen. Mehrere Gerichte sind möglich.</div>`}</div>
+    ${ws.length ? html`<h3 style="font-size:16px">Aus der Wunschbox</h3><div class="list">${ws.map(w => html`<button type="button" class="li" style="border:none;text-align:left;color:var(--fg)" onClick=${() => add(w.dish, w.art, w)}>
+      <span class="thumb"><${Art} k=${w.art} /></span><div class="tx"><b>${w.dish}</b><span>Wunsch von ${byId[w.who] ? byId[w.who].name : ''}${w.meal ? ' · ' + mealName(w.meal) : ''}</span></div><${Avatar} id=${w.who} size=${32} /></button>`)}</div>` : null}
+    <div class="field">Wer wünscht es sich? (optional)<${WhoPicker} value=${by} onChange=${v => setBy(by === v ? null : v)} /></div>
     <h3 style="font-size:16px">Lieblingsessen</h3>
-    <div class="foods" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">${CATALOG.map(c => html`<button type="button" class="food" onClick=${() => set(c.name, c.key)}><${Art} k=${c.key} /><span>${c.name}</span></button>`)}</div>
-    <form class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); const t = text.trim(); if (!t) return; const c = matchArt(t); set(t, c ? c.key : 'teller'); }}>
-      <label style="flex:1;min-width:0;display:flex"><span class="sr">Eigenes Gericht</span><input id="meal-own" class="input" value=${text} onInput=${e => setText(e.target.value)} placeholder="Eigenes Gericht, z. B. Gemüsecurry" /></label>
+    <div class="foods" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">${CATALOG.map(c => html`<button type="button" class="food" onClick=${() => add(c.name, c.key)}><${Art} k=${c.key} /><span>${c.name}</span></button>`)}</div>
+    <form class="row" style="flex-wrap:nowrap" onSubmit=${e => { e.preventDefault(); const t = text.trim(); if (!t) return; const c = matchArt(t); add(t, c ? c.key : 'teller'); setText(''); }}>
+      <label style="flex:1;min-width:0;display:flex"><span class="sr">Eigenes Gericht</span><input id="meal-own" class="input" value=${text} onInput=${e => setText(e.target.value)} placeholder=${ml === 'frueh' ? 'z. B. Müsli, Brötchen, Rührei' : 'Eigenes Gericht, z. B. Gemüsecurry'} /></label>
       <button class="btn" type="submit">Planen</button>
     </form>
-    ${cur ? html`<button type="button" class="btn ghost" onClick=${() => { S.del('mealplan/' + ds); onClose(); }}>Tag leeren</button>` : null}
+    <button type="button" class="btn" onClick=${onClose}>Fertig</button>
   <//>`;
 }
 
