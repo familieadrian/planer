@@ -1023,7 +1023,8 @@ function Heute({ now }){
     const next = copyR(r);
     next[mode][mid] = list; S.set('config/routines', next);
   };
-  const togglePT = t => { const body = Object.assign({}, t); delete body.id; const was = !!t.done; body.done = !was; body.doneOn = was ? null : today; S.set('ptasks/' + t.id, body);
+  const togglePT = t => { if (t.slot && (locked || t.date !== rday)) { toast(past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei – hier kann nichts mehr abgehakt werden.' : 'Das kann man erst ' + SLOTS[slotIdx(t.slot)].adv + ' abhaken.'); return; }
+    const body = Object.assign({}, t); delete body.id; const was = !!t.done; body.done = !was; body.doneOn = was ? null : today; S.set('ptasks/' + t.id, body);
     { givePoints(points, { [t.who]: was ? -1 : 1 }); if (was) logDrop(e => e.ptask === t.id); else logAdd({ who: t.who, stars: 1, what: t.label, kind: 'ptask', ptask: t.id, date: today }); } };
   /* Aufgabe lange gedrückt halten und zu einer anderen Person ziehen */
   const [drag, setDrag] = useState(null);
@@ -1084,7 +1085,7 @@ function Heute({ now }){
     <div class="cols">
       ${MEMBERS.map(m => {
         const list = (r[mode] && r[mode][m.id]) || [];
-        const pts = ptasks.filter(t => t.who === m.id && (t.done ? t.doneOn === today : t.date <= today)).sort((a, b) => a.date.localeCompare(b.date));
+        const pts = ptasks.filter(t => t.who === m.id && (t.slot ? t.slot === mode && t.date === rday : (t.done ? t.doneOn === today : t.date <= today))).sort((a, b) => a.date.localeCompare(b.date));
         const n = list.filter((t,i) => checks && checks[m.id + '-' + mode + '-' + i]).length + pts.filter(t => t.done).length;
         const tot = list.length + pts.length;
         const all = tot > 0 && n === tot;
@@ -1097,9 +1098,9 @@ function Heute({ now }){
           </div>
           ${pts.map(t => { const d = !!t.done; const late = !d && t.date < today;
             return html`<div style="display:flex;gap:6px;align-items:center">
-              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${() => togglePT(t)} style=${d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed'}>
+              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${() => togglePT(t)} style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed') + (t.slot && locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon || 'star'} size=${28} color=${mc(m.id)} /></span>
-                <span class="lbl">${t.label}<span class="when" style=${late ? 'color:var(--warn-ink)' : ''}>${late ? 'seit ' + WD[fromIso(t.date).getDay()] + ' ' + dm(fromIso(t.date)) : 'nur heute'}</span></span>
+                <span class="lbl">${t.label}<span class="when" style=${late ? 'color:var(--warn-ink)' : ''}>${late ? 'seit ' + WD[fromIso(t.date).getDay()] + ' ' + dm(fromIso(t.date)) : t.slot ? 'nur heute ' + SLOTS[slotIdx(t.slot)].adv : 'nur heute'}</span></span>
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
               </button>
               ${edit ? html`<button type="button" class="iconbtn" aria-label=${t.label + ' löschen'} onClick=${() => S.del('ptasks/' + t.id)}><${Icon} n="x" size=${18} /></button>` : null}
@@ -1130,29 +1131,44 @@ function Heute({ now }){
 }
 function PersonTaskForm({ mid, mode0, r, onClose }){
   const [label, setLabel] = useState(''); const [icon, setIcon] = useState('star');
-  const [when, setWhen] = useState('routine'); const [md, setMd] = useState(mode0);
+  const [when, setWhen] = useState('routine'); const [mds, setMds] = useState([mode0]);
+  const [whos, setWhos] = useState([mid]);
   const [date, setDate] = useState(iso(new Date()));
-  const name = byId[mid].name;
-  const save = e => { e.preventDefault(); const l = label.trim(); if (!l) return;
+  const flip = (arr, set, v) => set(arr.indexOf(v) >= 0 ? (arr.length > 1 ? arr.filter(x => x !== v) : arr) : arr.concat([v]));
+  const allOn = whos.length === MEMBERS.length;
+  const slotsSel = when === 'once' && mds.indexOf('tag') >= 0 ? ['tag'] : mds.filter(x => x !== 'tag');
+  const save = e => { e.preventDefault(); const l = label.trim(); if (!l || !slotsSel.length) return;
+    const nm = names(whos.length === MEMBERS.length ? [] : whos) || 'alle';
     if (when === 'routine') { const next = copyR(r);
-      next[md][mid] = ((next[md] || {})[mid] || []).concat([{ label: l, icon }]); S.set('config/routines', next);
-      toast('„' + l + '“ steht jetzt jeden ' + SLOTS[slotIdx(md)].name + ' bei ' + name); }
-    else { S.add('ptasks', { who: mid, label: l, icon, date, done: false }); toast('„' + l + '“ für ' + name + ' am ' + fromIso(date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' }) + ' eingetragen'); }
+      whos.forEach(w => slotsSel.forEach(md => { next[md][w] = ((next[md] || {})[w] || []).concat([{ label: l, icon }]); }));
+      S.set('config/routines', next);
+      toast('„' + l + '“ steht jetzt jeden ' + slotsSel.map(md => SLOTS[slotIdx(md)].name).join(', ') + ' bei ' + (allOn ? 'allen' : nm)); }
+    else { whos.forEach(w => slotsSel.forEach(md => S.add('ptasks', { who: w, label: l, icon, date, slot: md === 'tag' ? null : md, done: false })));
+      toast('„' + l + '“ für ' + (allOn ? 'alle' : nm) + ' am ' + fromIso(date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' }) + ' eingetragen'); }
     onClose(); };
-  return html`<${Sheet} title=${'Neue Aufgabe für ' + name} onClose=${onClose}>
+  const slotChip = (id, txt) => html`<button type="button" class="chip" aria-pressed=${slotsSel.indexOf(id) >= 0}
+    onClick=${() => { if (id === 'tag') { setMds(['tag']); return; } const base = mds.filter(x => x !== 'tag'); if (base.indexOf(id) >= 0) { if (base.length > 1) setMds(base.filter(x => x !== id)); } else setMds(base.concat([id])); }}>${txt}</button>`;
+  return html`<${Sheet} title="Neue Aufgabe" onClose=${onClose}>
     <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
       <label class="field">Was?<input id="pt-label" value=${label} onInput=${e => setLabel(e.target.value)} placeholder="z. B. Zimmer aufräumen" /></label>
+      <div class="field">Für wen? (mehrere antippen möglich)
+        <div class="row" style="gap:8px">
+          <button type="button" class="chip" aria-pressed=${allOn} onClick=${() => setWhos(allOn ? [mid] : MEMBERS.map(m => m.id))}>Alle</button>
+          ${MEMBERS.map(m => { const on = whos.indexOf(m.id) >= 0; return html`<button type="button" class="avatar avatar-btn" aria-pressed=${on} aria-label=${m.name} title=${m.name}
+            style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (on ? mc(m.id) : 'transparent') + ';opacity:' + (on ? 1 : .45)} onClick=${() => flip(whos, setWhos, m.id)}>${m.name[0]}</button>`; })}
+        </div></div>
       <div class="field">Symbol<div class="iconpick" role="group" aria-label="Symbol">${TASK_ICONS.map(k => html`<button type="button" aria-pressed=${icon === k} aria-label=${'Symbol ' + k} onClick=${() => setIcon(k)}><${Icon} n=${k} size=${20} /></button>`)}</div></div>
-      <div class="field">Wann?
-        <div class="seg" role="group" aria-label="Wann">
-          <button type="button" aria-pressed=${when === 'routine'} onClick=${() => setWhen('routine')}>Jeden Tag</button>
+      <div class="field">Wie oft?
+        <div class="seg" role="group" aria-label="Wie oft">
+          <button type="button" aria-pressed=${when === 'routine'} onClick=${() => { setWhen('routine'); if (mds.indexOf('tag') >= 0) setMds([mode0]); }}>Jeden Tag</button>
           <button type="button" aria-pressed=${when === 'once'} onClick=${() => setWhen('once')}>An einem Tag</button>
         </div></div>
-      ${when === 'routine' ? html`<div class="field">Zu welcher Routine?<div class="row" style="gap:6px">
-          ${SLOTS.map(x => html`<button type="button" class="chip" aria-pressed=${md === x.id} onClick=${() => setMd(x.id)}>${x.adv[0].toUpperCase() + x.adv.slice(1)}</button>`)}</div></div>`
-        : html`<${DateField} label="An welchem Tag?" value=${date} onChange=${setDate} />
-          <div class="sub" style="font-size:13px">Erscheint an diesem Tag bei ${name}. Wird sie nicht erledigt, bleibt sie stehen, bis sie abgehakt ist.</div>`}
-      <button class="btn" type="submit"><${Icon} n="plus" size=${20} />Hinzufügen</button>
+      ${when === 'once' ? html`<${DateField} label="An welchem Tag?" value=${date} onChange=${setDate} />` : null}
+      <div class="field">Wann am Tag? (mehrere antippen möglich)<div class="row" style="gap:6px">
+        ${SLOTS.map(x => slotChip(x.id, x.adv[0].toUpperCase() + x.adv.slice(1) + ' (' + x.from + (x.id === 'abend' ? '' : '–' + SLOTS[slotIdx(x.id) + 1].from) + ' Uhr)'))}
+        ${when === 'once' ? slotChip('tag', 'Ganzer Tag') : null}</div></div>
+      <div class="sub" style="font-size:13px">${when === 'once' && slotsSel[0] === 'tag' ? 'Bleibt stehen, bis sie abgehakt ist.' : 'Abhaken geht nur im gewählten Zeitraum. Ist er vorbei, fällt die Aufgabe raus und kann nicht mehr nachträglich abgehakt werden.'}</div>
+      <button class="btn" type="submit"><${Icon} n="plus" size=${20} />Hinzufügen${whos.length * slotsSel.length > 1 ? ' (' + whos.length * slotsSel.length + '×)' : ''}</button>
     </form>
   <//>`;
 }
@@ -1208,7 +1224,7 @@ function Kalender({ now }){
           ${todos.filter(t => todoOn(t, ds, today)).map(t => { const ws = whoOf(t, ds); const w = ws[0]; return html`<button type="button" class="ev todoev" style=${w ? 'background:' + mt(w) : ''} onClick=${() => setSheet({ kind:'todo', t, ds })}>
             <span class="t">${w ? html`<span class="dot" style=${'background:' + mc(w)}></span>erledigt · ${names(ws)}` : 'Aufgabe für alle'}</span><span class="x">${t.title}</span></button>`; })}
           ${ptasks.filter(t => t.date === ds && !hidden[t.who]).map(t => html`<button type="button" class="ev ptev" style=${'background:' + mt(t.who)} onClick=${() => setSheet({ kind:'pt', t })}>
-            <span class="t"><span class="dot" style=${'background:' + mc(t.who)}></span>${t.done ? 'erledigt' : 'Aufgabe'} · ${byId[t.who].name}</span><span class="x">${t.label}</span></button>`)}
+            <span class="t"><span class="dot" style=${'background:' + mc(t.who)}></span>${t.done ? 'erledigt' : 'Aufgabe'}${t.slot ? ' ' + SLOTS[slotIdx(t.slot)].adv : ''} · ${byId[t.who].name}</span><span class="x">${t.label}</span></button>`)}
           ${ex.map(x => html`<button type="button" class="ev exam" onClick=${() => { location.hash = 'schule'; }}><span class="t"><span class="dot" style=${'background:' + mc(x.kid)}></span>Schule</span><span class="x">Klassenarbeit ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span></button>`)}
           ${evs.map(e => html`<button type="button" class="ev" style=${'background:' + mt(e.who || 'familie')} onClick=${() => setSheet({ kind:'detail', ev: e })}>
             <span class="t"><span class="dot" style=${'background:' + mc(e.who || 'familie')}></span>${e.time ? e.time + (e.end ? '–' + e.end : '') : 'ganztags'}</span>
