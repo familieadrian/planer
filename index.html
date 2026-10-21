@@ -576,6 +576,19 @@ async function needPin(who, why, superOnly){ if (!byId[who] || (!hasPin(who) && 
 /* ---------- Offene Aufgaben (für alle) ---------- */
 const REPEATS = [['none','Einmalig'],['weekly','Jede Woche'],['daily','Jeden Tag'],['interval','Alle … Wochen']];
 const EVERY = [1,2,3,4,6,8];
+/* Wiederkehrende Termine: rep = 'w' (alle n Wochen), 'm' (monatlich), 'y' (jährlich) */
+const EV_REPS = [['', 'Nie'], ['w1', 'Jede Woche'], ['w2', 'Alle 2 Wochen'], ['w3', 'Alle 3 Wochen'], ['w4', 'Alle 4 Wochen'], ['m', 'Jeden Monat'], ['y', 'Jedes Jahr']];
+const evRepKey = e => !e.rep ? '' : e.rep === 'w' ? 'w' + (e.every || 1) : e.rep;
+const evRepTxt = e => (EV_REPS.find(r => r[0] === evRepKey(e)) || ['', ''])[1];
+function evOn(e, ds){
+  if (!e.rep) return e.date === ds;
+  if (ds < e.date || (e.until && ds > e.until) || (e.skip && e.skip.indexOf(ds) >= 0)) return false;
+  const a = fromIso(e.date), b = fromIso(ds);
+  if (e.rep === 'w') { const diff = Math.round((b - a) / 864e5); return diff % (7 * (e.every || 1)) === 0; }
+  if (e.rep === 'm') return a.getDate() === b.getDate();
+  if (e.rep === 'y') return a.getDate() === b.getDate() && a.getMonth() === b.getMonth();
+  return false;
+}
 const daysTxt = ds => { const k = ds.slice().sort().join(''); return k === '12345' ? 'Mo–Fr' : k === '06' ? 'Sa & So' : ds.slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map(d => WD[d]).join(', '); };
 const everyTxt = n => n === 1 ? 'jede Woche' : 'alle ' + n + ' Wochen';
 const isRep = t => t.repeat === 'weekly' || t.repeat === 'daily' || t.repeat === 'interval';
@@ -1106,7 +1119,7 @@ function Todos({ today }){
   ${sel ? html`<${TodoClaim} t=${sel} ds=${today} onClose=${() => setSel(null)} />` : null}
   ${add ? html`<${EventForm} date=${today} kind0=${add} fixed=${true} onClose=${() => setAdd(false)} />` : null}
   ${voice ? (voice.kind === 'event' || voice.forAll
-      ? html`<${EventForm} date=${voice.date || today} kind0=${voice.forAll ? 'todo' : 'event'} init=${{ title: voice.title, date: voice.date || today, time: voice.time || '', end: voice.end || '', who: voice.who.length === 1 ? voice.who[0] : 'familie', repeat: voice.repeat || 'none', every: voice.every, heard: voice.raw }} onClose=${() => setVoice(null)} />`
+      ? html`<${EventForm} date=${voice.date || today} kind0=${voice.forAll ? 'todo' : 'event'} init=${{ title: voice.title, date: voice.date || today, time: voice.time || '', end: voice.end || '', who: voice.who.length === 1 ? voice.who[0] : 'familie', repeat: voice.repeat || 'none', every: voice.every, evrep: voice.kind === 'event' && (voice.repeat === 'weekly' ? 'w1' : voice.repeat === 'interval' && voice.every <= 4 ? 'w' + voice.every : ''), heard: voice.raw }} onClose=${() => setVoice(null)} />`
       : html`<${PersonTaskForm} mid=${voice.who[0] || MEMBERS[0].id} mode0=${slotOf(new Date()).id} r=${(mem_ && mem_.docs['config/routines']) || {}} init=${voiceToTask(voice, voice.who[0] || MEMBERS[0].id, slotOf(new Date()).id)} onClose=${() => setVoice(null)} />`) : null}`;
 }
 function PinPad({ mode, who, why, title, superOnly, onDone }){
@@ -1258,7 +1271,7 @@ function Heute({ now }){
   const locked = mode !== slot.id; const past = slotIdx(mode) < slotIdx(slot.id);
   const [edit, setEdit] = useState(false);
   const r = routines || {};
-  const chips = events.filter(e => e.date === today).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
+  const chips = events.filter(e => evOn(e, today)).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
   const soonExams = exams.filter(x => { const n = daysUntil(x.datum, now); return n >= 0 && n <= 3; }).sort((a,b) => a.datum.localeCompare(b.datum));
 
   const toggle = async (mid, i) => {
@@ -1505,7 +1518,7 @@ function Kalender({ now }){
     ${events === undefined ? html`<div class="loading">Termine werden geladen …</div>` : html`
     <div class="week">
       ${days.map(d => { const ds = iso(d);
-        const evs = events.filter(e => e.date === ds && visible(e)).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
+        const evs = events.filter(e => evOn(e, ds) && visible(e)).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
         const ex = exams.filter(x => x.datum === ds && !hidden[x.kid]);
         return html`<section class=${'day' + (ds === today ? ' today' : '')} aria-label=${d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}>
           <div class="dayhead"><span>${WD[d.getDay()]}</span><span class="n">${d.getDate()}</span></div>
@@ -1517,16 +1530,16 @@ function Kalender({ now }){
           ${ptasks.filter(t => !hidden[t.who] && (t.every ? (t.lastDone === ds || (ds >= today && ds === (nextDue(t.lastDone, t.every, t.date) < today ? today : nextDue(t.lastDone, t.every, t.date))) ) : t.date === ds)).map(t => html`<button type="button" class="ev ptev" style=${'background:' + mt(t.who)} onClick=${() => setSheet({ kind:'pt', t })}>
             <span class="t"><span class="dot" style=${'background:' + mc(t.who)}></span>${t.every ? (t.lastDone === ds ? 'erledigt' : everyTxt(t.every)) : t.done ? 'erledigt' : 'Aufgabe'}${t.slot ? ' ' + SLOTS[slotIdx(t.slot)].adv : ''} · ${byId[t.who].name}</span><span class="x">${t.label}</span></button>`)}
           ${ex.map(x => html`<button type="button" class="ev exam" onClick=${() => { location.hash = 'schule'; }}><span class="t"><span class="dot" style=${'background:' + mc(x.kid)}></span>Schule</span><span class="x">Klassenarbeit ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span></button>`)}
-          ${evs.map(e => html`<button type="button" class="ev" style=${'background:' + mt(e.who || 'familie')} onClick=${() => setSheet({ kind:'detail', ev: e })}>
+          ${evs.map(e => html`<button type="button" class="ev" style=${'background:' + mt(e.who || 'familie')} onClick=${() => setSheet({ kind:'detail', ev: e, ds })}>
             <span class="t"><span class="dot" style=${'background:' + mc(e.who || 'familie')}></span>${e.time ? e.time + (e.end ? '–' + e.end : '') : 'ganztags'}</span>
-            <span class="x">${e.title}</span></button>`)}
+            <span class="x">${e.title}${e.rep ? html`<span class="lockmini" title=${evRepTxt(e)}><${Icon} n="undo" size=${13} /></span>` : null}</span></button>`)}
           <button type="button" class="addday" onClick=${() => setSheet({ kind:'add', date: ds })} aria-label=${'Termin am ' + dm(d) + ' hinzufügen'}>+ Termin</button>
         </section>`; })}
     </div>`}
     ${events && events.length === 0 ? html`<div class="empty"><strong>Noch keine Termine</strong>Tippe auf „Termin“ oder lies einen Elternbrief, eine Einladung oder einen Terminplan per Screenshot ein.</div>` : null}
     <div class="sub" style="font-size:13px">Google Kalender wird angezeigt, sobald er verbunden ist. Bis dahin landen Termine hier im Familienkalender.</div>
     ${sheet && sheet.kind === 'add' ? html`<${EventForm} date=${sheet.date} onClose=${() => setSheet(null)} />` : null}
-    ${sheet && sheet.kind === 'detail' ? html`<${EventDetail} ev=${sheet.ev} onClose=${() => setSheet(null)} />` : null}
+    ${sheet && sheet.kind === 'detail' ? html`<${EventDetail} ev=${sheet.ev} ds=${sheet.ds} onClose=${() => setSheet(null)} />` : null}
     ${sheet && sheet.kind === 'shot' ? html`<${EventImport} now=${now} onClose=${() => setSheet(null)} />` : null}
     ${sheet && sheet.kind === 'pt' ? html`<${Sheet} title=${sheet.t.label} onClose=${() => setSheet(null)}>
       <div class="row"><${Avatar} id=${sheet.t.who} size=${40} /><div><b>${byId[sheet.t.who].name}</b><div class="sub" style="font-size:14px">${fromIso(sheet.t.date).toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })} · ${sheet.t.done ? 'erledigt' : 'offen'}</div></div></div>
@@ -1539,12 +1552,14 @@ function EventForm({ date, onClose, kind0, fixed, init }){
   const [kind, setKind] = useState(kind0 || 'event');
   const [f, setF] = useState(Object.assign({ title:'', date, time:'', end:'', who:'familie', repeat:'none', stars:1 }, init || {}));
   const fromVoice = r => setF(o => Object.assign({}, o, { title: r.title || o.title, date: r.date || o.date, time: r.time || o.time, end: r.end || o.end,
-    who: r.who && r.who.length === 1 ? r.who[0] : o.who, repeat: r.repeat || o.repeat, every: r.every || o.every }));
+    who: r.who && r.who.length === 1 ? r.who[0] : o.who, repeat: r.repeat || o.repeat, every: r.every || o.every, evrep: r.repeat === 'weekly' ? 'w1' : r.repeat === 'interval' && r.every <= 4 ? 'w' + r.every : o.evrep }));
   const up = (k, v) => setF(Object.assign({}, f, { [k]: v }));
   const todo = kind === 'todo';
   const save = e => { e.preventDefault(); if (!f.title.trim() || !f.date) return;
     if (todo) { S.add('todos', Object.assign({ title: f.title.trim(), date: f.date, repeat: f.repeat, stars: f.stars, done: {} }, f.repeat === 'interval' ? { every: f.every || 4 } : {})); onClose(); toast('Aufgabe für alle eingetragen'); return; }
-    S.add('events', { title: f.title.trim(), date: f.date, time: f.time || null, end: f.end || null, who: f.who, source:'hand' }); onClose(); toast('Termin gespeichert'); };
+    const rk = f.evrep || ''; const recur = rk ? (rk[0] === 'w' ? { rep: 'w', every: +rk.slice(1) } : { rep: rk }) : {};
+    S.add('events', Object.assign({ title: f.title.trim(), date: f.date, time: f.time || null, end: f.end || null, who: f.who, source:'hand' }, recur, rk && f.until ? { until: f.until } : {}));
+    onClose(); toast(rk ? 'Termin gespeichert · ' + (EV_REPS.find(r => r[0] === rk) || ['', ''])[1] : 'Termin gespeichert'); };
   return html`<${Sheet} title=${todo ? 'Neue Aufgabe für alle' : 'Neuer Termin'} onClose=${onClose}>
     <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
       ${fixed ? null : html`<div class="seg" role="group" aria-label="Art">
@@ -1563,19 +1578,31 @@ function EventForm({ date, onClose, kind0, fixed, init }){
       ${todo && f.repeat === 'interval' ? html`<div class="field">Wie oft? (zählt ab dem letzten Erledigen)<div class="row" style="gap:6px">${EVERY.map(n => html`<button type="button" class="chip" aria-pressed=${(f.every || 4) === n} onClick=${() => up('every', n)}>${everyTxt(n)}</button>`)}</div></div>` : null}
       ${todo ? html`<div class="field">Wiederholen?<div class="row" style="gap:6px">${REPEATS.map(r => html`<button type="button" class="chip" aria-pressed=${f.repeat === r[0]} onClick=${() => up('repeat', r[0])}>${r[1]}${r[0] === 'weekly' ? ' (' + WD[fromIso(f.date).getDay()] + ')' : ''}</button>`)}</div></div>
         <div class="field">Wie viele Sterne?<div class="row" style="gap:6px">${[1,2,3].map(n => html`<button type="button" class="chip" aria-pressed=${f.stars === n} onClick=${() => up('stars', n)} aria-label=${n + ' Sterne'}>${Array.from({ length: n }, () => html`<${Star} size=${16} />`)}</button>`)}</div></div>`
-      : html`<div class="field">Für wen?<${WhoPicker} value=${f.who} onChange=${v => up('who', v)} list=${WHO} /></div>`}
+      : html`<div class="field">Wiederholen?<div class="row" style="gap:6px">${EV_REPS.map(r => html`<button type="button" class="chip" aria-pressed=${(f.evrep || '') === r[0]} onClick=${() => up('evrep', r[0])}>${r[1]}</button>`)}</div></div>
+        ${f.evrep ? html`<div class="field">Bis wann? <div class="row" style="gap:6px"><button type="button" class="chip" aria-pressed=${!f.until} onClick=${() => up('until', '')}>Ohne Ende</button><button type="button" class="chip" aria-pressed=${!!f.until} onClick=${() => up('until', f.until || iso(addDays(fromIso(f.date), 90)))}>Enddatum wählen</button></div></div>
+          ${f.until ? html`<${DateField} label="Letzter Termin" value=${f.until} onChange=${v => up('until', v)} />` : null}` : null}
+        <div class="field">Für wen?<${WhoPicker} value=${f.who} onChange=${v => up('who', v)} list=${WHO} /></div>`}
       <button class="btn" type="submit">Speichern</button>
     </form>
   <//>`;
 }
-function EventDetail({ ev, onClose }){
+function EventDetail({ ev, ds, onClose }){
   const [confirm, setConfirm] = useState(false);
+  const day = ds || ev.date;
+  const rec = !!ev.rep;
+  const skipOne = () => { const b = Object.assign({}, mem_.docs['events/' + ev.id] || ev); delete b.id; b.skip = (b.skip || []).concat([day]); S.set('events/' + ev.id, b); toast('Nur dieser Termin wurde gelöscht'); onClose(); };
+  const endHere = () => { const b = Object.assign({}, mem_.docs['events/' + ev.id] || ev); delete b.id; b.until = iso(addDays(fromIso(day), -1)); if (b.until < b.date) { S.del('events/' + ev.id); } else S.set('events/' + ev.id, b); toast('Ab hier wiederholt sich der Termin nicht mehr'); onClose(); };
   return html`<${Sheet} title=${ev.title} onClose=${onClose}>
-    <div class="row"><${Avatar} id=${ev.who || 'familie'} size=${40} /><div><b>${fromIso(ev.date).toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</b>
-      <div class="sub" style="font-size:14px">${ev.time ? ev.time + (ev.end ? ' – ' + ev.end : '') + ' Uhr' : 'ganztags'} · ${byId[ev.who || 'familie'].name}</div></div></div>
+    <div class="row"><${Avatar} id=${ev.who || 'familie'} size=${40} /><div><b>${fromIso(day).toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</b>
+      <div class="sub" style="font-size:14px">${ev.time ? ev.time + (ev.end ? ' – ' + ev.end : '') + ' Uhr' : 'ganztags'} · ${byId[ev.who || 'familie'].name}</div>
+      ${rec ? html`<div class="sub" style="font-size:14px;display:flex;align-items:center;gap:4px"><${Icon} n="undo" size=${14} />${evRepTxt(ev)} seit ${dm(fromIso(ev.date))}${ev.until ? ' bis ' + dm(fromIso(ev.until)) : ''}</div>` : null}</div></div>
     ${ev.note ? html`<div>${ev.note}</div>` : null}
-    ${confirm ? html`<div class="row"><span style="font-weight:800">Wirklich löschen?</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => { S.del('events/' + ev.id); onClose(); }}>Löschen</button><button type="button" class="btn small ghost" onClick=${() => setConfirm(false)}>Abbrechen</button></div>`
-      : html`<button type="button" class="btn ghost" onClick=${() => setConfirm(true)}>Termin löschen</button>`}
+    ${confirm ? html`<div class="field">${rec ? 'Was soll gelöscht werden?' : 'Wirklich löschen?'}<div class="row">
+        ${rec ? html`<button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${skipOne}><${Icon} n="bin" size=${16} />Nur diesen Termin</button>
+          <button type="button" class="btn small ghost" onClick=${endHere}>Diesen und alle folgenden</button>` : null}
+        <button type="button" class=${'btn small' + (rec ? ' ghost' : '')} style=${rec ? 'color:var(--danger)' : 'background:var(--danger);color:#fff'} onClick=${() => { S.del('events/' + ev.id); onClose(); }}><${Icon} n="bin" size=${16} />${rec ? 'Ganze Serie' : 'Löschen'}</button>
+        <button type="button" class="btn small ghost" onClick=${() => setConfirm(false)}>Abbrechen</button></div></div>`
+      : html`<button type="button" class="btn ghost" onClick=${() => setConfirm(true)}><${Icon} n="bin" size=${18} />Termin löschen</button>`}
   <//>`;
 }
 function EventImport({ now, onClose }){
