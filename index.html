@@ -385,6 +385,9 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 @media (max-width:420px){.week.week3{gap:6px}.week.week3 .day{padding:8px 6px}.week.week3 .ev .x{font-size:12px}}
 .wdrow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:6px}
 .wdrow .chip{padding:6px 0;text-align:center;justify-content:center}
+.flystar{position:fixed;z-index:300;pointer-events:none;display:flex;align-items:center;gap:2px;filter:drop-shadow(0 4px 10px rgba(242,169,59,.6))}
+.flystar b{font-size:16px;font-weight:900;color:#C9821A}
+[data-star]{display:inline-flex;transform-origin:left center}
 </style>
 
 </head>
@@ -1223,6 +1226,30 @@ function PinPad({ mode, who, why, title, superOnly, onDone }){
       ${mode === 'check' && !superOnly ? html`<div class="sub" style="font-size:12px;text-align:center">PIN vergessen? Die Super-PIN von ${byId[who] ? byId[who].name : ''} oder von Mama/Papa geht auch.</div>` : null}
     </div></div>`;
 }
+/* ---------- Fliegender Stern beim Abhaken ---------- */
+const STAR_SVG = '<svg viewBox="0 0 24 24" width="44" height="44" fill="#F2A93B" stroke="#C9821A" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3l-5.5 2.9 1-6.2L3 9.6l6.2-.9z"/></svg>';
+function flyStars(from, whos, amount){
+  try {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    (whos || []).forEach((who, k) => {
+      const tgt = document.querySelector('[data-star="' + who + '"]');
+      const bump = () => { if (tgt && tgt.animate) tgt.animate([{ transform:'scale(1)' }, { transform:'scale(1.35)' }, { transform:'scale(1)' }], { duration: 420, easing: 'ease-out' }); };
+      if (reduce || !from || !document.body.animate) { bump(); return; }
+      const sx = from.left + from.width / 2, sy = from.top + from.height / 2;
+      let tx, ty; if (tgt) { const r = tgt.getBoundingClientRect(); tx = r.left + 14; ty = r.top + r.height / 2; } else { tx = sx; ty = Math.max(20, sy - 220); }
+      const el = document.createElement('div'); el.className = 'flystar'; el.innerHTML = STAR_SVG + (amount && amount !== 1 ? '<b>+' + fmtS(amount) + '</b>' : '');
+      el.style.left = sx + 'px'; el.style.top = sy + 'px'; document.body.appendChild(el);
+      const dx = tx - sx, dy = ty - sy;
+      const a = el.animate([
+        { transform: 'translate(-50%,-50%) scale(.2) rotate(0deg)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) translate(0px,-46px) scale(1.5) rotate(40deg)', opacity: 1, offset: .25 },
+        { transform: 'translate(-50%,-50%) translate(' + dx * .55 + 'px,' + (dy * .55 - 70) + 'px) scale(1.1) rotate(200deg)', opacity: 1, offset: .65 },
+        { transform: 'translate(-50%,-50%) translate(' + dx + 'px,' + dy + 'px) scale(.45) rotate(360deg)', opacity: .9 }
+      ], { duration: 1050, delay: k * 160, easing: 'cubic-bezier(.35,.1,.25,1)', fill: 'forwards' });
+      a.onfinish = () => { el.remove(); bump(); };
+    });
+  } catch (e) {}
+}
 function UndoBar(){
   const [n, setN] = useState(0); const [show, setShow] = useState(false); const tm = useRef(null);
   useEffect(() => { const h = () => { setN(undoStack.length); setShow(undoStack.length > 0); clearTimeout(tm.current); tm.current = setTimeout(() => setShow(false), 15000); };
@@ -1284,6 +1311,8 @@ function TodoClaim({ t, ds, onClose }){
     if (res && !(pick.length === 1 && pick[0] === res) && !(await needPin(res, 'Reserviert für ' + byId[res].name + ' – zum Ändern PIN von ' + byId[res].name))) return;
     for (const w of pick.concat(prev).filter((x, i, a) => a.indexOf(x) === i)) { if (pinAll(w) && !(await needPin(w, 'Bestätigen für ' + byId[w].name))) return; }
     const fresh = Object.assign({ id: t.id }, mem_.docs['todos/' + t.id] || t);
+    const added = pick.filter(x => prev.indexOf(x) < 0);
+    if (added.length && !DEMO) { const bt = document.querySelector('.sheet .btn'); flyStars(bt ? bt.getBoundingClientRect() : null, added, each); }
     claimTodo(fresh, ds, pick, mem_.docs['points/all'] || points);
     toast(pick.length ? 'Super, ' + names(pick) + '! ' + (pick.length > 1 ? 'Je +' : '+') + fmtS(each) + (each === 1 ? ' Stern' : ' Sterne') : 'Wieder offen'); onClose(); };
   return html`<${Sheet} title=${t.title} onClose=${onClose}>
@@ -1347,12 +1376,13 @@ function Heute({ now }){
   const chips = events.filter(e => evOn(e, today)).sort((a,b) => (a.time || '').localeCompare(b.time || ''));
   const soonExams = exams.filter(x => { const n = daysUntil(x.datum, now); return n >= 0 && n <= 3; }).sort((a,b) => a.datum.localeCompare(b.datum));
 
-  const toggle = async (mid, i, md) => { md = md || mode; const lk = md !== 'tag' && locked;
+  const toggle = async (mid, i, md, srcEl) => { md = md || mode; const lk = md !== 'tag' && locked; const rect = srcEl ? srcEl.getBoundingClientRect() : null;
     const tk = ((r[md] || {})[mid] || [])[i];
     if (!lk && tk && (tk.lock || pinAll(mid)) && !(await needPin(mid, '„' + tk.label + '“ bestätigen'))) return;
     if (lk) { toast(past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei – hier kann nichts mehr abgehakt werden.' : SLOTS[slotIdx(mode)].name + '-Aufgaben kann man ab ' + SLOTS[slotIdx(mode)].from + ' Uhr abhaken.'); return; }
     const k = mid + '-' + md + '-' + i;
     const c = Object.assign({}, mem_.docs['checks/' + rday] || {}); const was = !!c[k]; c[k] = !was;
+    if (!was && !DEMO) flyStars(rect, [mid]);
     S.set('checks/' + rday, c);
     { givePoints(mem_.docs['points/all'] || {}, { [mid]: was ? -1 : 1 });
       const lbl = ((r[md] || {})[mid] || [])[i]; const what = lbl ? lbl.label : 'Routine';
@@ -1373,9 +1403,9 @@ function Heute({ now }){
     if (!(await needPin(t.who, t.lock ? 'Schloss öffnen' : 'Schloss setzen'))) return; const b = Object.assign({}, t, { lock: !t.lock }); delete b.id; S.set('ptasks/' + t.id, b); };
   const delPT = async t => { if (t.lock && !(await needPin(t.who, 'Geschützte Aufgabe löschen'))) return; S.del('ptasks/' + t.id); };
   const [prof, setProf] = useState(null);
-  const togglePT = async t => { if (!(t.slot && (locked || t.date !== rday)) && (t.lock || pinAll(t.who)) && !(await needPin(t.who, '„' + t.label + '“ bestätigen'))) return;
+  const togglePT = async (t, srcEl) => { const rect = srcEl ? srcEl.getBoundingClientRect() : null; if (!(t.slot && (locked || t.date !== rday)) && (t.lock || pinAll(t.who)) && !(await needPin(t.who, '„' + t.label + '“ bestätigen'))) return;
     if (t.slot && (locked || t.date !== rday)) { toast(past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei – hier kann nichts mehr abgehakt werden.' : 'Das kann man erst ' + SLOTS[slotIdx(t.slot)].adv + ' abhaken.'); return; }
-    const body = Object.assign({}, t); delete body.id; const was = !!(t.done && (!t.every || t.doneOn === today)); body.done = !was; body.doneOn = was ? null : today;
+    const body = Object.assign({}, t); delete body.id; const was = !!(t.done && (!t.every || t.doneOn === today)); body.done = !was; if (!was && !DEMO) flyStars(rect, [t.who]); body.doneOn = was ? null : today;
     if (t.every) { if (was) { body.lastDone = t.prevDone || null; } else { body.prevDone = t.lastDone || null; body.lastDone = today; } }
     S.set('ptasks/' + t.id, body);
     { givePoints(mem_.docs['points/all'] || {}, { [t.who]: was ? -1 : 1 }); if (was) logDrop(e => e.ptask === t.id && (!t.every || e.date === today)); else logAdd({ who: t.who, stars: 1, what: t.label, kind: 'ptask', ptask: t.id, date: today }); } };
@@ -1451,12 +1481,12 @@ function Heute({ now }){
           <div class="colhead">
             <button type="button" class="avatar-tap" aria-label=${'Profil von ' + m.name + ' öffnen'} onClick=${() => setProf(m.id)}><span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${m.name[0]}</span></button>
             <div style="min-width:0"><div class="colname" role="button" tabindex="0" onClick=${() => setProf(m.id)} style="cursor:pointer">${m.name}${pinsDoc()[m.id] && pinsDoc()[m.id].pin ? html`<span class="lockmini"><${Icon} n="lock" size=${14} /></span>` : null}</div>
-              ${m.kid ? html`<div class="stars"><${Star} />${fmtS((points && points[m.id]) || 0)} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}${points && points[m.id] ? html` · <${Star} size=${14} />${fmtS(points[m.id])}` : null}</div>`}</div>
+              ${m.kid ? html`<div class="stars" data-star=${m.id}><${Star} />${fmtS((points && points[m.id]) || 0)} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}<span data-star=${m.id} style="align-items:center;gap:2px">${points && points[m.id] ? html` · <${Star} size=${14} />${fmtS(points[m.id])}` : null}</span></div>`}</div>
             <button type="button" class="addbtn" aria-label=${'Aufgabe für ' + m.name + ' hinzufügen'} title="Aufgabe hinzufügen" onClick=${() => setAddFor(m.id)}><${Icon} n="plus" size=${22} /></button>
           </div>
           ${pts.map(t => { const d = !!(t.done && (!t.every || t.doneOn === today)); const late = !d && !t.every && t.date < today;
             return html`<div style="display:flex;gap:6px;align-items:center">
-              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${() => togglePT(t)} style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed') + (t.slot && locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
+              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${e => togglePT(t, e.currentTarget)} style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed') + (t.slot && locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon || 'star'} size=${28} color=${mc(m.id)} /></span>
                 <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}<span class="when" style=${late ? 'color:var(--warn-ink)' : ''}>${t.every ? everyTxt(t.every) + (t.lastDone && !d ? ' · zuletzt ' + dm(fromIso(t.lastDone)) : '') : late ? 'seit ' + WD[fromIso(t.date).getDay()] + ' ' + dm(fromIso(t.date)) : t.slot ? 'nur heute ' + SLOTS[slotIdx(t.slot)].adv : 'nur heute'}</span></span>
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
@@ -1466,7 +1496,7 @@ function Heute({ now }){
           ${[['tag', tagList], [mode, list]].map(([md, L]) => L.map((t, i) => { if (!vis(t) && !edit) return null; const d = !!(checks && checks[m.id + '-' + md + '-' + i]); const lk = md !== 'tag' && locked;
             return html`<div style="display:flex;gap:6px;align-items:center">
               <button type="button" class=${'task' + (drag && drag.mid === m.id && drag.i === i && drag.md === md ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')}
-                onPointerDown=${e => startPress(e, m.id, i, t, md)} onContextMenu=${e => e.preventDefault()} onClick=${() => { if (skipClick.current) return; toggle(m.id, i, md); }}
+                onPointerDown=${e => startPress(e, m.id, i, t, md)} onContextMenu=${e => e.preventDefault()} onClick=${e => { if (skipClick.current) return; toggle(m.id, i, md, e.currentTarget); }}
                 style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : '') + (lk && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon} size=${28} color=${mc(m.id)} /></span>
                 <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}${t.days || md === 'tag' ? html`<span class="when">${md === 'tag' ? 'ganztags' : ''}${md === 'tag' && t.days ? ' · ' : ''}${t.days ? daysTxt(t.days) : ''}</span>` : null}</span>
