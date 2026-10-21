@@ -214,6 +214,58 @@ h1,h2,h3{margin:0;text-wrap:balance}
   .clock{font-size:32px}
   .head h1{font-size:26px}
 }
+/* ---------- Bus-Ampel ---------- */
+.buses{display:flex;flex-direction:column;gap:10px}
+.bus{display:flex;align-items:center;gap:18px;padding:14px 20px;border-radius:24px;border:3px solid var(--line);background:var(--surface)}
+.bus .lamp{display:flex;flex-direction:column;gap:5px;background:#1E232B;padding:7px;border-radius:16px;flex-shrink:0}
+.bus .lamp i{width:24px;height:24px;border-radius:50%;background:#3A4049;display:block}
+.bus.red{border-color:#E5484D;background:rgba(229,72,77,.14)}
+.bus.orange{border-color:#F5A524;background:rgba(245,165,36,.16)}
+.bus.green{border-color:#30A46C;background:rgba(48,164,108,.14)}
+.bus.red .lamp .r{background:#E5484D;box-shadow:0 0 14px #E5484D}
+.bus.orange .lamp .o{background:#F5A524;box-shadow:0 0 14px #F5A524}
+.bus.green .lamp .g{background:#30A46C;box-shadow:0 0 14px #30A46C}
+.bus .bx{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.bus .bk{display:flex;align-items:center;gap:8px;font-size:18px;flex-wrap:wrap}
+.bus .bt{display:flex;gap:6px;align-items:center;font-weight:700;color:var(--muted);font-size:15px}
+.bus .bm{font-size:22px;font-weight:800}
+.bus .bc{font-size:52px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-1px;flex-shrink:0}
+.bus.red .bc{animation:buspulse .8s ease-in-out infinite alternate}
+@keyframes buspulse{from{opacity:1}to{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.bus.red .bc{animation:none}}
+@media (max-width:700px){.bus{gap:12px;padding:12px}.bus .bc{font-size:36px}.bus .bm{font-size:18px}}
+.ev.busev{border:2px dashed var(--line)}
+.busform{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;align-items:center}
+.busform .input{height:44px}
+/* ---------- Datum/Zeit, Tipp-Vorschau, Aufgaben ---------- */
+.app{height:var(--app-h,100%)}
+.dstep{display:flex;align-items:center;gap:6px}
+.dstep .iconbtn{background:var(--surface-2);height:48px;width:48px}
+.dval{flex:1;min-width:0;height:48px;border:2px solid var(--line);border-radius:14px;background:var(--surface);color:var(--fg);font-size:16px;font-weight:800;padding:0 10px}
+.dval[aria-expanded="true"]{border-color:var(--accent)}
+.mcal{border:2px solid var(--line);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--surface);color:var(--fg)}
+.mcal .mh{display:flex;align-items:center;justify-content:space-between;font-size:16px}
+.mg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.mg .wd{text-align:center;font-size:12px;font-weight:800;color:var(--muted)}
+.md{height:44px;border:none;border-radius:12px;background:var(--surface-2);color:var(--fg);font-size:16px;font-weight:800}
+.md.out{opacity:.4}
+.md.tdy{outline:2px solid var(--accent);outline-offset:-2px}
+.md[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.typeprev{position:fixed;left:0;right:0;z-index:200;background:var(--surface);border-top:3px solid var(--accent);border-bottom:3px solid var(--accent);box-shadow:0 0 18px rgba(0,0,0,.25);padding:10px 20px;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+.typeprev .tl{font-size:13px;font-weight:800;color:var(--muted)}
+.typeprev .tv{font-size:28px;font-weight:800;white-space:nowrap;overflow:hidden;min-height:36px}
+.typeprev .tph{color:var(--muted);font-weight:600}
+.typeprev .caret{display:inline-block;width:3px;height:28px;background:var(--accent);vertical-align:-4px;margin-left:2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.todolist{display:flex;flex-wrap:wrap;gap:10px}
+.todo{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 16px 8px 10px;border-radius:18px;border:3px dashed var(--line);background:var(--surface-2);color:var(--fg);font-size:17px;font-weight:800;text-align:left}
+.todo.done{border-style:solid}
+.todo .tb{width:36px;height:36px;border-radius:50%;border:3px solid var(--muted);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.todo .ts{display:flex;align-items:center;gap:2px;font-size:13px;color:var(--muted)}
+.ev.todoev{border:2px dashed var(--line)}
+.claim{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+.claimbtn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px;border-radius:20px;border:3px solid transparent;background:var(--surface-2);color:var(--fg);font-size:17px}
+.claimbtn[aria-pressed="true"]{border-color:var(--accent)}
 </style>
 
 </head>
@@ -253,6 +305,52 @@ function kw(d){ const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.get
 const daysUntil = (s, now) => Math.round((fromIso(s) - fromIso(iso(now))) / 864e5);
 const countdown = n => n === 0 ? 'heute' : n === 1 ? 'morgen' : 'in ' + n + ' Tagen';
 
+/* ---------- Offene Aufgaben (für alle) ---------- */
+const REPEATS = [['none','Einmalig'],['weekly','Jede Woche'],['daily','Jeden Tag']];
+const isRep = t => t.repeat === 'weekly' || t.repeat === 'daily';
+const todoKey = (t, ds) => isRep(t) ? ds : 'once';
+function todoOn(t, ds, today){
+  if (t.repeat === 'daily') return !t.date || ds >= t.date;
+  if (t.repeat === 'weekly') return !!t.date && ds >= t.date && fromIso(t.date).getDay() === fromIso(ds).getDay();
+  if (ds === today) return t.done && t.done.once ? t.doneOn === today : (!t.date || t.date <= today) && (!t.until || today <= t.until);
+  return t.date === ds;
+}
+function claimTodo(t, ds, who, points){
+  if (points === undefined) { toast('Einen Moment, Sterne werden noch geladen …'); return; }
+  const k = todoKey(t, ds); const done = Object.assign({}, t.done || {}); const prev = done[k]; const p = Object.assign({}, points || {}); const st = t.stars || 1;
+  if (prev) { p[prev] = Math.max(0, (p[prev] || 0) - st); delete done[k]; }
+  if (who) { done[k] = who; p[who] = (p[who] || 0) + st; }
+  const body = Object.assign({}, t, { done }); delete body.id;
+  if (k === 'once') body.doneOn = who ? ds : null;
+  S.set('todos/' + t.id, body); S.set('points/all', p);
+}
+const MON = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const normTime = v => { const s = String(v || '').trim().replace(/[^\d:.]/g, ''); if (!s) return '';
+  let h, m; const parts = s.split(/[:.]/);
+  if (parts.length > 1) { h = +parts[0]; m = +(parts[1] || 0); } else if (s.length <= 2) { h = +s; m = 0; } else { h = +s.slice(0, -2); m = +s.slice(-2); }
+  if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return null; return pad(h) + ':' + pad(m); };
+
+/* ---------- Schulbus ---------- */
+const BUS_DEFAULT = { first:{ dep:'07:44', arr:'07:55' }, second:{ dep:'08:02', arr:'08:15', note:'mit Betreuung' } };
+const toMin = t => { const m = /^(\d{1,2})[:.](\d{2})/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+const hm = t => { const n = toMin(t); return n == null ? '' : Math.floor(n / 60) + ':' + pad(n % 60); };
+const busCfg = cfg => ({ first: Object.assign({}, BUS_DEFAULT.first, cfg && cfg.first), second: Object.assign({}, BUS_DEFAULT.second, cfg && cfg.second) });
+/* Welcher Bus? Erste Stunde belegt → früher Bus, sonst späterer Bus (mit Betreuung). */
+function busFor(tt, d, cfg){
+  const wd = d.getDay(); if (!tt || !tt.days || wd < 1 || wd > 5) return null;
+  const col = tt.days[wd - 1] || [];
+  const i = col.findIndex(f => f && !/pause|frei|betreuung/i.test(f));
+  if (i < 0) return null;
+  const c = busCfg(cfg); const b = i === 0 ? c.first : c.second;
+  if (toMin(b.dep) == null) return null;
+  return { dep: hm(b.dep), arr: hm(b.arr), note: i === 0 ? '' : (b.note || ''), lesson: i + 1 };
+}
+function useBuses(){
+  const cfg = useDoc('config/bus');
+  const tts = SCHOOL.map(m => useDoc('timetables/' + m.id));
+  return d => SCHOOL.map((m, k) => { const b = busFor(tts[k], d, cfg); return b ? Object.assign({ kid: m.id }, b) : null; }).filter(Boolean);
+}
+
 /* ---------- Icons ---------- */
 const IC = {
   shirt:'M8 3L3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z',
@@ -286,6 +384,7 @@ const IC = {
   left:'M15 5l-7 7 7 7', right:'M9 5l7 7-7 7',
   edit:'M4 20l4-1 11-11-3-3L5 16z',
   paw:'M8 13c-2 0-4 2-4 4s2 3 4 2 3-1 4-1 2 1 4 1 4 0 4-2-2-4-4-4-3 2-4 2-2-2-4-2zM7 9a1.5 2 0 1 0 0 .01M17 9a1.5 2 0 1 0 0 .01M10 6a1.5 2 0 1 0 0 .01M14 6a1.5 2 0 1 0 0 .01',
+  bus:'M6 3h12a2 2 0 0 1 2 2v11H4V5a2 2 0 0 1 2-2zM4 10h16M7 16v3M17 16v3M8 13h.01M16 13h.01',
   music:'M9 18V5l11-2v13M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zM20 16a3 3 0 1 1-3-3 3 3 0 0 1 3 3z'
 };
 const TASK_ICONS = ['shirt','tooth','bed','bowl','shoe','bag','lunch','dish','bin','car','book','basket','fork','pencil','drop','moon','blocks','paw','music','star'];
@@ -595,6 +694,127 @@ function FilePick({ file, setFile, label }){
 }
 
 /* ---------- HEUTE ---------- */
+function DateField({ label, value, onChange }){
+  const [open, setOpen] = useState(false);
+  const d = value ? fromIso(value) : fromIso(iso(new Date()));
+  const [m, setM] = useState(new Date(d.getFullYear(), d.getMonth(), 1, 12));
+  const first = monday(m);
+  const cells = Array.from({ length: 42 }, (x, i) => addDays(first, i));
+  const today = iso(new Date());
+  const pick = ds => { onChange(ds); setOpen(false); };
+  return html`<div class="field">${label}
+    <div class="dstep">
+      <button type="button" class="iconbtn" aria-label="Einen Tag früher" onClick=${() => onChange(iso(addDays(d, -1)))}><${Icon} n="left" /></button>
+      <button type="button" class="dval" aria-expanded=${open} onClick=${() => { setM(new Date(d.getFullYear(), d.getMonth(), 1, 12)); setOpen(!open); }}>${d.toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short', year:'numeric' })}</button>
+      <button type="button" class="iconbtn" aria-label="Einen Tag später" onClick=${() => onChange(iso(addDays(d, 1)))}><${Icon} n="right" /></button>
+    </div>
+    ${open ? html`<div class="mcal">
+      <div class="mh">
+        <button type="button" class="iconbtn" aria-label="Voriger Monat" onClick=${() => setM(new Date(m.getFullYear(), m.getMonth() - 1, 1, 12))}><${Icon} n="left" /></button>
+        <b>${MON[m.getMonth()]} ${m.getFullYear()}</b>
+        <button type="button" class="iconbtn" aria-label="Nächster Monat" onClick=${() => setM(new Date(m.getFullYear(), m.getMonth() + 1, 1, 12))}><${Icon} n="right" /></button>
+      </div>
+      <div class="mg">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(w => html`<span class="wd">${w}</span>`)}
+        ${cells.map(c => { const cs = iso(c); return html`<button type="button" class=${'md' + (c.getMonth() !== m.getMonth() ? ' out' : '') + (cs === today ? ' tdy' : '')} aria-pressed=${cs === value} aria-label=${c.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })} onClick=${() => pick(cs)}>${c.getDate()}</button>`; })}
+      </div>
+      <div class="row" style="gap:6px">
+        <button type="button" class="chip" onClick=${() => pick(today)}>Heute</button>
+        <button type="button" class="chip" onClick=${() => pick(iso(addDays(new Date(), 1)))}>Morgen</button>
+        <button type="button" class="chip" onClick=${() => pick(iso(addDays(new Date(), 7)))}>In 1 Woche</button>
+      </div>
+    </div>` : null}
+  </div>`;
+}
+function TimeField({ label, value, onChange, placeholder, id, style }){
+  const [t, setT] = useState(value ? hm(value) : '');
+  const [bad, setBad] = useState(false);
+  const typed = v => { setT(v); const n = normTime(v); setBad(false); if (n !== null) onChange(n); };
+  const blur = () => { const n = normTime(t); if (n === null) { setBad(true); return; } setT(n ? hm(n) : ''); };
+  return html`<label class="field" style=${style || ''}>${label}<input id=${id} inputmode="numeric" autocomplete="off" placeholder=${placeholder || 'z. B. 7:45'} value=${t}
+    style=${bad ? 'border-color:var(--danger)' : ''} onInput=${e => typed(e.target.value)} onBlur=${blur} /></label>`;
+}
+function TypePreview(){
+  const [st, setSt] = useState(null);
+  const [pos, setPos] = useState('top:0');
+  useEffect(() => {
+    let cur = null, maxH = window.innerHeight;
+    const ok = el => el && ((el.tagName === 'INPUT' && !/^(checkbox|radio|file|button|submit|range|color|hidden)$/i.test(el.type)) || el.tagName === 'TEXTAREA');
+    const lab = el => { const l = el.getAttribute('aria-label') || (el.labels && el.labels[0] && el.labels[0].firstChild && el.labels[0].firstChild.nodeType === 3 ? el.labels[0].firstChild.textContent : '') || el.placeholder || 'Eingabe'; return l.trim(); };
+    const place = () => { const vv = window.visualViewport; const ih = window.innerHeight;
+      if (!cur) maxH = Math.max(maxH, ih);
+      if (vv && ih - vv.height > 120) setPos('bottom:' + Math.max(0, Math.round(ih - (vv.offsetTop + vv.height))) + 'px');
+      else if (maxH - ih > 120) setPos('bottom:0');
+      else setPos('top:0'); };
+    const upd = () => { if (!cur) return; const v = cur.type === 'password' ? cur.value.replace(/./g, '•') : cur.value; setSt({ label: lab(cur), val: v.length > 60 ? '…' + v.slice(-60) : v, ph: cur.placeholder || '' }); place(); };
+    const fin = e => { if (ok(e.target)) { cur = e.target; upd(); setTimeout(place, 400); } };
+    const fout = e => { if (e.target === cur) setTimeout(() => { if (document.activeElement !== cur) { cur = null; setSt(null); } }, 80); };
+    const inp = e => { if (e.target === cur) upd(); };
+    document.addEventListener('focusin', fin); document.addEventListener('focusout', fout); document.addEventListener('input', inp, true);
+    const vv = window.visualViewport; if (vv) { vv.addEventListener('resize', place); vv.addEventListener('scroll', place); }
+    window.addEventListener('resize', place);
+    return () => { document.removeEventListener('focusin', fin); document.removeEventListener('focusout', fout); document.removeEventListener('input', inp, true);
+      if (vv) { vv.removeEventListener('resize', place); vv.removeEventListener('scroll', place); } window.removeEventListener('resize', place); };
+  }, []);
+  if (!st) return null;
+  return html`<div class="typeprev" style=${pos} aria-hidden="true"><span class="tl">${st.label}</span>
+    <span class="tv">${st.val ? st.val : html`<span class="tph">${st.ph}</span>`}<span class="caret"></span></span></div>`;
+}
+function Todos({ today }){
+  const todos = useCol('todos') || [];
+  const [sel, setSel] = useState(null); const [add, setAdd] = useState(false);
+  const list = todos.filter(t => todoOn(t, today, today)).sort((a, b) => (!!(a.done || {})[todoKey(a, today)] - !!(b.done || {})[todoKey(b, today)]) || (a.title || '').localeCompare(b.title || ''));
+  return html`<section class="card" aria-label="Aufgaben für alle" style="padding:14px 18px">
+    <div class="row" style="justify-content:space-between"><h2 style="font-size:19px">Aufgaben für alle <span class="sub" style="font-size:14px">· wer’s macht, bekommt die Sterne</span></h2>
+      <button type="button" class="btn small ghost" onClick=${() => setAdd(true)}><${Icon} n="plus" size=${18} />Aufgabe</button></div>
+    ${list.length ? html`<div class="todolist">${list.map(t => { const who = (t.done || {})[todoKey(t, today)];
+      return html`<button type="button" class=${'todo' + (who ? ' done' : '')} onClick=${() => setSel(t)} style=${who ? 'background:' + mt(who) + ';border-color:' + mc(who) : ''}
+        aria-label=${t.title + (who ? ', erledigt von ' + byId[who].name : ', offen')}>
+        ${who ? html`<${Avatar} id=${who} size=${36} />` : html`<span class="tb"></span>`}
+        <span style="display:flex;flex-direction:column;gap:2px"><span>${t.title}</span>
+          <span class="ts">${who ? 'erledigt von ' + byId[who].name : Array.from({ length: t.stars || 1 }, () => html`<${Star} size=${14} />`)}${t.repeat === 'weekly' ? ' · jede Woche' : t.repeat === 'daily' ? ' · jeden Tag' : ''}</span></span>
+      </button>`; })}</div>` : html`<div class="sub" style="font-size:14px">Gerade nichts offen.</div>`}
+  </section>
+  ${sel ? html`<${TodoClaim} t=${sel} ds=${today} onClose=${() => setSel(null)} />` : null}
+  ${add ? html`<${EventForm} date=${today} kind0="todo" onClose=${() => setAdd(false)} />` : null}`;
+}
+function TodoClaim({ t, ds, onClose }){
+  const points = useDoc('points/all');
+  const [confirm, setConfirm] = useState(false);
+  const who = (t.done || {})[todoKey(t, ds)];
+  const st = t.stars || 1;
+  const claim = id => { if (id === who) { onClose(); return; } claimTodo(t, ds, id, points); if (points !== undefined) { toast('Super, ' + byId[id].name + '! +' + st + (st === 1 ? ' Stern' : ' Sterne')); onClose(); } };
+  return html`<${Sheet} title=${t.title} onClose=${onClose}>
+    <div class="sub" style="font-size:16px">${who ? 'Erledigt von ' + byId[who].name + '. Falsch? Einfach die richtige Person antippen.' : 'Wer hat es gemacht? Antippen und Sterne bekommen.'} (${st} ${st === 1 ? 'Stern' : 'Sterne'})</div>
+    <div class="claim">${MEMBERS.map(m => html`<button type="button" class="claimbtn" aria-pressed=${who === m.id} onClick=${() => claim(m.id)} style=${who === m.id ? 'background:' + mt(m.id) : ''}>
+      <${Avatar} id=${m.id} size=${64} /><b>${m.name}</b></button>`)}</div>
+    ${who ? html`<button type="button" class="btn ghost" onClick=${() => { claimTodo(t, ds, null, points); onClose(); }}>Doch nicht erledigt</button>` : null}
+    ${confirm ? html`<div class="row"><span style="font-weight:800">Aufgabe ganz löschen?</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${() => { S.del('todos/' + t.id); onClose(); }}>Löschen</button><button type="button" class="btn small ghost" onClick=${() => setConfirm(false)}>Nein</button></div>`
+      : html`<button type="button" class="btn ghost" onClick=${() => setConfirm(true)}>Aufgabe löschen</button>`}
+  <//>`;
+}
+function BusAmpel({ buses }){
+  const [t, setT] = useState(Date.now());
+  useEffect(() => { const i = setInterval(() => setT(Date.now()), 1000); return () => clearInterval(i); }, []);
+  const now = new Date(t); const nm = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  const groups = {};
+  buses.forEach(b => { if (!groups[b.dep]) groups[b.dep] = Object.assign({ kids: [] }, b); groups[b.dep].kids.push(b.kid); });
+  const list = Object.keys(groups).map(k => Object.assign(groups[k], { left: toMin(k) - nm })).filter(g => g.left > -10 && g.left <= 90).sort((a, b) => a.left - b.left);
+  if (!list.length) return null;
+  return html`<div class="buses">${list.map(g => {
+    const st = g.left <= 0 ? 'gone' : g.left < 5 ? 'red' : g.left < 15 ? 'orange' : 'green';
+    const secs = Math.max(0, Math.ceil(g.left * 60));
+    const msg = { green:'Noch Zeit – in Ruhe fertig machen', orange:'Schuhe und Jacke an!', red:'Jetzt los zum Bus!', gone:'Der Bus ist abgefahren' }[st];
+    const names = g.kids.map(k => byId[k].name).join(' & ');
+    return html`<section class=${'bus ' + st} aria-label=${'Bus für ' + names + ' um ' + g.dep + ' Uhr: ' + msg}>
+      <div class="lamp" aria-hidden="true"><i class="r"></i><i class="o"></i><i class="g"></i></div>
+      <div class="bx">
+        <div class="bk">${g.kids.map(k => html`<${Avatar} id=${k} size=${34} />`)}<b>${names}</b></div>
+        <div class="bt"><${Icon} n="bus" size=${20} />Bus ${g.dep} Uhr${g.note ? ' · ' + g.note : ''}</div>
+        <div class="bm">${msg}</div>
+      </div>
+      <div class="bc" aria-hidden="true">${st === 'gone' ? '–' : Math.floor(secs / 60) + ':' + pad(secs % 60)}</div>
+    </section>`; })}</div>`;
+}
 function Heute({ now }){
   const today = iso(now);
   const routines = useDoc('config/routines');
@@ -602,6 +822,7 @@ function Heute({ now }){
   const points = useDoc('points/all');
   const events = useCol('events') || [];
   const exams = useCol('exams') || [];
+  const busesOn = useBuses();
   const [mode, setMode] = useState(now.getHours() < 14 ? 'morgen' : 'abend');
   const [edit, setEdit] = useState(false);
   const r = routines || {};
@@ -632,11 +853,13 @@ function Heute({ now }){
         <div class="clock" aria-label="Uhrzeit">${pad(now.getHours())}:${pad(now.getMinutes())}</div>
       </div>
     </div>
+    <${BusAmpel} buses=${busesOn(now)} />
     ${(chips.length || soonExams.length) ? html`<a href="#kalender" class="todaychips" style="text-decoration:none;color:inherit">
       <span class="sub" style="font-size:14px;font-weight:800">Heute & bald</span>
       ${chips.map(e => html`<span class="tchip"><span class="dot" style=${'background:' + mc(e.who || 'familie')}></span>${e.time ? e.time + ' ' : ''}${e.title}</span>`)}
       ${soonExams.map(x => html`<span class="tchip exam">${countdown(daysUntil(x.datum, now))}: ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span>`)}
     </a>` : null}
+    <${Todos} today=${today} />
     ${routines === undefined ? html`<div class="loading">Routinen werden geladen …</div>` : html`
     <div class="cols">
       ${MEMBERS.map(m => {
@@ -647,7 +870,7 @@ function Heute({ now }){
           <div class="colhead">
             <span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${m.name[0]}</span>
             <div style="min-width:0"><div class="colname">${m.name}</div>
-              ${m.kid ? html`<div class="stars"><${Star} />${(points && points[m.id]) || 0} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}</div>`}</div>
+              ${m.kid ? html`<div class="stars"><${Star} />${(points && points[m.id]) || 0} Sterne</div>` : html`<div class="sub" style="font-size:14px">${m.role}${points && points[m.id] ? html` · <${Star} size=${14} />${points[m.id]}` : null}</div>`}</div>
           </div>
           ${list.map((t, i) => { const d = !!(checks && checks[m.id + '-' + mode + '-' + i]);
             return html`<div style="display:flex;gap:6px;align-items:center">
@@ -690,6 +913,8 @@ function Kalender({ now }){
   const days = [0,1,2,3,4,5,6].map(i => addDays(mon, i));
   const today = iso(now);
   const visible = e => !hidden[e.who || 'familie'];
+  const busesOn = useBuses();
+  const todos = useCol('todos') || [];
   return html`
     <div class="head">
       <div><h1>Kalender · KW ${kw(mon)}</h1><div class="sub">${dm(days[0])} – ${dm(days[6])}${days[6].getFullYear()}</div></div>
@@ -713,6 +938,11 @@ function Kalender({ now }){
         const ex = exams.filter(x => x.datum === ds && !hidden[x.kid]);
         return html`<section class=${'day' + (ds === today ? ' today' : '')} aria-label=${d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}>
           <div class="dayhead"><span>${WD[d.getDay()]}</span><span class="n">${d.getDate()}</span></div>
+          ${busesOn(d).filter(b => !hidden[b.kid]).map(b => html`<button type="button" class="ev busev" style=${'background:' + mt(b.kid)} onClick=${() => { location.hash = 'schule'; }}>
+            <span class="t"><span class="dot" style=${'background:' + mc(b.kid)}></span>${b.dep}${b.arr ? '–' + b.arr : ''}</span>
+            <span class="x">Bus · ${byId[b.kid].name}</span></button>`)}
+          ${todos.filter(t => todoOn(t, ds, today)).map(t => { const w = (t.done || {})[todoKey(t, ds)]; return html`<button type="button" class="ev todoev" style=${w ? 'background:' + mt(w) : ''} onClick=${() => setSheet({ kind:'todo', t, ds })}>
+            <span class="t">${w ? html`<span class="dot" style=${'background:' + mc(w)}></span>erledigt · ${byId[w].name}` : 'Aufgabe für alle'}</span><span class="x">${t.title}</span></button>`; })}
           ${ex.map(x => html`<button type="button" class="ev exam" onClick=${() => { location.hash = 'schule'; }}><span class="t"><span class="dot" style=${'background:' + mc(x.kid)}></span>Schule</span><span class="x">Klassenarbeit ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span></button>`)}
           ${evs.map(e => html`<button type="button" class="ev" style=${'background:' + mt(e.who || 'familie')} onClick=${() => setSheet({ kind:'detail', ev: e })}>
             <span class="t"><span class="dot" style=${'background:' + mc(e.who || 'familie')}></span>${e.time ? e.time + (e.end ? '–' + e.end : '') : 'ganztags'}</span>
@@ -724,22 +954,33 @@ function Kalender({ now }){
     <div class="sub" style="font-size:13px">Google Kalender wird angezeigt, sobald er verbunden ist. Bis dahin landen Termine hier im Familienkalender.</div>
     ${sheet && sheet.kind === 'add' ? html`<${EventForm} date=${sheet.date} onClose=${() => setSheet(null)} />` : null}
     ${sheet && sheet.kind === 'detail' ? html`<${EventDetail} ev=${sheet.ev} onClose=${() => setSheet(null)} />` : null}
-    ${sheet && sheet.kind === 'shot' ? html`<${EventImport} now=${now} onClose=${() => setSheet(null)} />` : null}`;
+    ${sheet && sheet.kind === 'shot' ? html`<${EventImport} now=${now} onClose=${() => setSheet(null)} />` : null}
+    ${sheet && sheet.kind === 'todo' ? html`<${TodoClaim} t=${todos.find(x => x.id === sheet.t.id) || sheet.t} ds=${sheet.ds} onClose=${() => setSheet(null)} />` : null}`;
 }
-function EventForm({ date, onClose }){
-  const [f, setF] = useState({ title:'', date, time:'', end:'', who:'familie' });
+function EventForm({ date, onClose, kind0 }){
+  const [kind, setKind] = useState(kind0 || 'event');
+  const [f, setF] = useState({ title:'', date, time:'', end:'', who:'familie', repeat:'none', stars:1 });
   const up = (k, v) => setF(Object.assign({}, f, { [k]: v }));
+  const todo = kind === 'todo';
   const save = e => { e.preventDefault(); if (!f.title.trim() || !f.date) return;
+    if (todo) { S.add('todos', { title: f.title.trim(), date: f.date, repeat: f.repeat, stars: f.stars, done: {} }); onClose(); toast('Aufgabe für alle eingetragen'); return; }
     S.add('events', { title: f.title.trim(), date: f.date, time: f.time || null, end: f.end || null, who: f.who, source:'hand' }); onClose(); toast('Termin gespeichert'); };
-  return html`<${Sheet} title="Neuer Termin" onClose=${onClose}>
+  return html`<${Sheet} title=${todo ? 'Neue Aufgabe für alle' : 'Neuer Termin'} onClose=${onClose}>
     <form style="display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
-      <label class="field">Was?<input id="ev-title" value=${f.title} onInput=${e => up('title', e.target.value)} placeholder="z. B. Elternabend" /></label>
-      <div class="row" style="align-items:flex-end">
-        <label class="field" style="flex:1 1 160px">Datum<input id="ev-date" type="date" value=${f.date} onInput=${e => up('date', e.target.value)} /></label>
-        <label class="field" style="flex:1 1 110px">Von (leer = ganztags)<input id="ev-time" type="time" value=${f.time} onInput=${e => up('time', e.target.value)} /></label>
-        <label class="field" style="flex:1 1 110px">Bis<input id="ev-end" type="time" value=${f.end} onInput=${e => up('end', e.target.value)} /></label>
+      <div class="seg" role="group" aria-label="Art">
+        <button type="button" aria-pressed=${!todo} onClick=${() => setKind('event')}><${Icon} n="cal" size=${20} />Termin</button>
+        <button type="button" aria-pressed=${todo} onClick=${() => setKind('todo')}><${Icon} n="star" size=${20} />Aufgabe für alle</button>
       </div>
-      <div class="field">Für wen?<${WhoPicker} value=${f.who} onChange=${v => up('who', v)} list=${WHO} /></div>
+      ${todo ? html`<div class="sub" style="font-size:14px">Gehört niemandem fest. Wer sie erledigt, tippt sich ein und bekommt die Sterne.</div>` : null}
+      <label class="field">Was?<input id="ev-title" value=${f.title} onInput=${e => up('title', e.target.value)} placeholder=${todo ? 'z. B. Müll rausbringen' : 'z. B. Elternabend'} /></label>
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:2 1 240px;min-width:0"><${DateField} label=${todo ? (f.repeat === 'none' ? 'Ab wann?' : 'Erstes Mal') : 'Datum'} value=${f.date} onChange=${v => up('date', v)} /></div>
+        ${todo ? null : html`<${TimeField} id="ev-time" label="Von (leer = ganztags)" value=${f.time} onChange=${v => up('time', v)} style="flex:1 1 120px" />
+        <${TimeField} id="ev-end" label="Bis" value=${f.end} onChange=${v => up('end', v)} style="flex:1 1 120px" />`}
+      </div>
+      ${todo ? html`<div class="field">Wie oft?<div class="row" style="gap:6px">${REPEATS.map(r => html`<button type="button" class="chip" aria-pressed=${f.repeat === r[0]} onClick=${() => up('repeat', r[0])}>${r[1]}${r[0] === 'weekly' ? ' (' + WD[fromIso(f.date).getDay()] + ')' : ''}</button>`)}</div></div>
+        <div class="field">Wie viele Sterne?<div class="row" style="gap:6px">${[1,2,3].map(n => html`<button type="button" class="chip" aria-pressed=${f.stars === n} onClick=${() => up('stars', n)} aria-label=${n + ' Sterne'}>${Array.from({ length: n }, () => html`<${Star} size=${16} />`)}</button>`)}</div></div>`
+      : html`<div class="field">Für wen?<${WhoPicker} value=${f.who} onChange=${v => up('who', v)} list=${WHO} /></div>`}
       <button class="btn" type="submit">Speichern</button>
     </form>
   <//>`;
@@ -860,11 +1101,39 @@ function Schule({ now }){
                 <button type="button" class="iconbtn" aria-label=${x.fach + ' von ' + byId[x.kid].name + ' löschen'} onClick=${() => S.del('exams/' + x.id)}><${Icon} n="x" size=${18} /></button></div>`; })}
           </div>` : html`<div class="sub" style="font-size:15px">Keine anstehenden Klassenarbeiten.</div>`}
         </div>
+        <${BusCard} tt=${tt} kid=${kid} now=${now} />
         <${ExamForm} kid=${kid} subjects=${subjects} now=${now} />
       </aside>
     </div>
     ${sheet && sheet.kind === 'shot' ? html`<${TimetableImport} kid=${kid} onClose=${() => setSheet(null)} />` : null}
     ${sheet && sheet.kind === 'cell' ? html`<${CellEdit} kid=${kid} tt=${tt} at=${sheet} subjects=${subjects} onClose=${() => setSheet(null)} />` : null}`;
+}
+function BusCard({ tt, kid, now }){
+  const cfg = useDoc('config/bus');
+  const c = busCfg(cfg);
+  const [f, setF] = useState(null);
+  const mon = monday(now);
+  const week = [0,1,2,3,4].map(i => { const d = addDays(mon, i); return { d, b: busFor(tt, d, cfg) }; });
+  const up = (k, v) => setF(o => Object.assign({}, o, { [k]: v }));
+  const save = () => {
+    if (toMin(f.d1) == null || toMin(f.d2) == null) { toast('Bitte beide Abfahrtszeiten eintragen'); return; }
+    S.set('config/bus', { first:{ dep:f.d1, arr:f.a1 }, second:{ dep:f.d2, arr:f.a2, note:f.n2.trim() } }); setF(null); toast('Busfahrzeiten gespeichert'); };
+  const z = t => { const n = toMin(t); return n == null ? '' : pad(Math.floor(n / 60)) + ':' + pad(n % 60); };
+  return html`<div class="card">
+    <div class="row" style="justify-content:space-between"><h2 style="font-size:20px;display:flex;align-items:center;gap:8px"><${Icon} n="bus" size=${22} />Bus zur Schule</h2>
+      ${f ? null : html`<button type="button" class="btn small ghost" onClick=${() => setF({ d1:z(c.first.dep), a1:z(c.first.arr), d2:z(c.second.dep), a2:z(c.second.arr), n2:c.second.note || '' })}><${Icon} n="edit" size=${16} />Zeiten</button>`}</div>
+    ${f ? html`<div class="row" style="align-items:flex-end"><b style="width:90px;font-size:14px;padding-bottom:14px">ab 1. Std.</b>
+        <${TimeField} label="Abfahrt" value=${f.d1} onChange=${v => up('d1', v)} style="flex:1 1 90px" /><${TimeField} label="Ankunft" value=${f.a1} onChange=${v => up('a1', v)} style="flex:1 1 90px" /></div>
+      <div class="row" style="align-items:flex-end"><b style="width:90px;font-size:14px;padding-bottom:14px">ab 2. Std.</b>
+        <${TimeField} label="Abfahrt" value=${f.d2} onChange=${v => up('d2', v)} style="flex:1 1 90px" /><${TimeField} label="Ankunft" value=${f.a2} onChange=${v => up('a2', v)} style="flex:1 1 90px" /></div>
+      <input class="input" style="height:44px" aria-label="Hinweis zum späteren Bus" placeholder="Hinweis, z. B. mit Betreuung" value=${f.n2} onInput=${e => up('n2', e.target.value)} />
+      <div class="row"><button type="button" class="btn small" onClick=${save}>Speichern</button><button type="button" class="btn small ghost" onClick=${() => setF(null)}>Abbrechen</button></div>` : html`
+      <div class="list">${week.map(w => html`<div class="li">
+        <b style="width:28px">${WD[w.d.getDay()]}</b>
+        <div class="tx">${w.b ? html`<b>${w.b.dep} Uhr</b><span>Unterricht ab ${w.b.lesson}. Std.${w.b.note ? ' · ' + w.b.note : ''}</span>` : html`<span>${tt ? 'kein Unterricht eingetragen' : 'erst Stundenplan eintragen'}</span>`}</div>
+      </div>`)}</div>
+      <div class="sub" style="font-size:13px">Gilt für ${SCHOOL.map(m => m.name).join(' und ')}. Der Bus ergibt sich aus der ersten Stunde im Stundenplan. Auf „Heute“ zeigt eine Ampel, wann es losgeht: grün = noch Zeit, orange ab 15 Min., rot ab 5 Min.</div>`}
+  </div>`;
 }
 function ExamForm({ kid, subjects, now }){
   const [fach, setFach] = useState(''); const [datum, setDatum] = useState(iso(addDays(now, 7))); const [thema, setThema] = useState('');
@@ -875,8 +1144,8 @@ function ExamForm({ kid, subjects, now }){
     <h2 style="font-size:18px">Neue Klassenarbeit für ${byId[kid].name}</h2>
     ${subjects.length ? html`<div class="row" role="group" aria-label="Fach" style="gap:6px">${subjects.map(s => html`<button type="button" class="chip" aria-pressed=${fach === s} onClick=${() => setFach(s)}>${s}</button>`)}</div>` : null}
     <label class="field">Fach<input id="ex-fach" value=${fach} onInput=${e => setFach(e.target.value)} placeholder="z. B. Mathe" /></label>
-    <div class="row" style="align-items:flex-end">
-      <label class="field" style="flex:1 1 140px">Datum<input id="ex-date" type="date" value=${datum} onInput=${e => setDatum(e.target.value)} /></label>
+    <div class="row" style="align-items:flex-start">
+      <div style="flex:1 1 240px;min-width:0"><${DateField} label="Datum" value=${datum} onChange=${setDatum} /></div>
       <label class="field" style="flex:2 1 160px">Thema<input id="ex-thema" value=${thema} onInput=${e => setThema(e.target.value)} placeholder="z. B. Einmaleins" /></label>
     </div>
     <button class="btn" type="submit"><${Icon} n="plus" size=${20} />Eintragen</button>
@@ -1148,6 +1417,10 @@ function App(){
   </div>`;
 }
 render(html`<${App} />`, document.getElementById('root'));
+const tpBox = document.createElement('div'); document.body.appendChild(tpBox); render(html`<${TypePreview} />`, tpBox);
+/* Sichtbare Höhe merken, damit die Leiste unten immer zu sehen ist (auch wenn die Browserleiste ein-/ausfährt) */
+const setAppH = () => { const a = document.activeElement; if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return; document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px'); };
+setAppH(); window.addEventListener('resize', setAppH); window.addEventListener('orientationchange', () => setTimeout(setAppH, 300));
 })();
 </script>
 </body>
