@@ -468,6 +468,9 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 }
 @media (max-width:400px){.schoolhead .sub{display:none}.shopbar .whobar h2{display:none}}
 .iconbtn.spk{width:36px;height:36px;border-radius:10px;background:var(--surface-2);flex-shrink:0}
+.taskrow{position:relative;min-width:0}.taskrow>.task{width:100%}
+.taskrow>.iconbtn.spk{position:absolute;top:-9px;left:-7px;width:32px;height:32px;border-radius:50%;background:var(--surface);border:2px solid var(--line);color:var(--fg);z-index:2;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.taskrow>.iconbtn.spk svg{width:16px;height:16px}
 .freelbl{font-size:11px;font-weight:800;color:var(--ok-ink);background:var(--ok-soft);border-radius:8px;padding:2px 8px;align-self:flex-start}.daylbls{display:flex;flex-wrap:wrap;gap:4px}.updbar{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:400;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;border:none;background:var(--accent);color:var(--accent-fg,#fff);font:inherit;font-weight:800;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer}
 .remsheet{gap:14px}.rembell{align-self:center;width:76px;height:76px;border-radius:50%;background:var(--warn-soft);color:var(--warn-ink);display:flex;align-items:center;justify-content:center;animation:ring 1s ease-in-out 3}
 @keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}40%{transform:rotate(-12deg)}60%{transform:rotate(8deg)}80%{transform:rotate(-4deg)}}
@@ -1762,7 +1765,7 @@ function Heute({ now }){
             <button type="button" class="addbtn" aria-label=${'Aufgabe für ' + m.name + ' hinzufügen'} title="Aufgabe hinzufügen" onClick=${() => setAddFor(m.id)}><${Icon} n="plus" size=${22} /></button>
           </div>
           ${pts.map(t => { const d = !!(t.done && (!t.every || t.doneOn === today)); const late = !d && !t.every && t.date < today;
-            return html`<div style="display:flex;gap:6px;align-items:center">
+            return html`<div class="taskrow">
               <button type="button" class=${'task' + (drag && drag.kind === 'pt' && drag.t.id === t.id ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onPointerDown=${e => startPress(e, m.id, null, t, null, 'pt')} onContextMenu=${e => e.preventDefault()} onClick=${e => { if (skipClick.current) return; onTap('p' + t.id, e.currentTarget, el => togglePT(t, el), () => lockPT(t)); }} style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed') + (t.slot && locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon || 'star'} size=${28} color=${mc(m.id)} /></span>
                 <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}<span class="when" style=${late ? 'color:var(--warn-ink)' : ''}>${t.every ? everyTxt(t.every) + (t.lastDone && !d ? ' · zuletzt ' + dm(fromIso(t.lastDone)) : '') : late ? 'seit ' + WD[fromIso(t.date).getDay()] + ' ' + dm(fromIso(t.date)) : t.slot ? 'nur heute ' + SLOTS[slotIdx(t.slot)].adv : 'nur heute'}</span></span>
@@ -1772,7 +1775,7 @@ function Heute({ now }){
             </div>
             ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockPT(t)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${20} /></button><button type="button" class="chip" aria-label=${t.label + ' ändern'} onClick=${() => openTasks({ pt: t.id })}><${Icon} n="edit" size=${20} /></button><button type="button" class="chip" aria-label=${t.label + ' löschen'} onClick=${() => delPT(t)}><${Icon} n="bin" size=${20} /></button></div>` : null}`; })}
           ${[['tag', tagList], [mode, list]].map(([md, L]) => L.map((t, i) => { if (!vis(t) && !edit) return null; const d = !!(checks && checks[m.id + '-' + md + '-' + i]); const lk = md !== 'tag' && locked;
-            return html`<div style="display:flex;gap:6px;align-items:center">
+            return html`<div class="taskrow">
               <button type="button" class=${'task' + (drag && drag.kind === 'rt' && drag.mid === m.id && drag.i === i && drag.md === md ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')}
                 onPointerDown=${e => startPress(e, m.id, i, t, md)} onContextMenu=${e => e.preventDefault()} onClick=${e => { if (skipClick.current) return; onTap(m.id + md + i, e.currentTarget, el => toggle(m.id, i, md, el), () => lockTask(m.id, i, md)); }}
                 style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : '') + (lk && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
@@ -3071,7 +3074,7 @@ const tpBox = document.createElement('div'); document.body.appendChild(tpBox); r
 const taskBox = document.createElement('div'); document.body.appendChild(taskBox); render(html`<${TaskHost} />`, taskBox);
 const pinBox = document.createElement('div'); document.body.appendChild(pinBox); render(html`<${PinHost} />`, pinBox);
 /* Automatisch aktualisieren: alle 10 Minuten nachsehen, ob eine neue Version online ist */
-const APP_VER = '55';
+const APP_VER = '56';
 function UpdateBar(){
   const [nv, setNv] = useState(null);
   useEffect(() => { const chk = async () => { try { const t = await fetch('index.html?u=' + Date.now(), { cache: 'no-store' }).then(r => r.text());
