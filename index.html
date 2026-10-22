@@ -474,6 +474,11 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 @media (prefers-reduced-motion:reduce){.rembell{animation:none}}
 .li.tm{flex-wrap:wrap}.li.tm .ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.li.tm .tx{flex:1 1 160px}.li.tm .tx span{font-size:13px;color:var(--muted)}
 .dots{display:inline-flex;gap:2px;align-items:center}.avstack{display:flex}.avstack .avatar+.avatar{margin-left:-10px;box-shadow:0 0 0 2px var(--surface)}
+.daygrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}.mongrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.daygrid button,.mongrid button{min-height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-weight:800;font-size:16px;padding:0;cursor:pointer}
+.daygrid button[aria-pressed=true],.mongrid button[aria-pressed=true]{background:var(--fg);color:var(--bg);border-color:var(--fg)}.daygrid button:disabled{opacity:.25;cursor:not-allowed}
+.bdstep.next{outline:3px solid var(--accent);outline-offset:6px;border-radius:12px}
+@media (max-width:520px){.mongrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .ev.bdev{background:var(--warn-soft)}.ev.bdev .t{display:flex;align-items:center;gap:4px;color:var(--warn-ink)}
 .bdhint{display:flex;align-items:center;gap:10px;background:var(--warn-soft);color:var(--warn-ink);font-size:16px}
 .bdli.now{outline:3px solid var(--star);background:var(--warn-soft)}.bdcake{width:40px;height:40px;border-radius:12px;background:var(--warn-soft);color:var(--warn-ink);display:flex;align-items:center;justify-content:center;flex-shrink:0}.bdage{font-size:13px;font-weight:700;color:var(--muted)}.li.bdli .tx span{font-size:13px;color:var(--muted)}
@@ -681,15 +686,15 @@ function parseSpeech(text, now){
   out.title = title;
   return out;
 }
-function VoiceAdd({ onResult, label, small }){
-  const [txt, setTxt] = useState(null);
-  const voice = useVoice(t => onResult(parseSpeech(t)));
-  const go = () => { if (!txt || !txt.trim()) return; const r = parseSpeech(txt); setTxt(null); onResult(r); };
+function VoiceAdd({ onResult, label, small, parse, example }){
+  const [txt, setTxt] = useState(null); const P = parse || parseSpeech;
+  const voice = useVoice(t => onResult(P(t)));
+  const go = () => { if (!txt || !txt.trim()) return; const r = P(txt); setTxt(null); onResult(r); };
   useEffect(() => { if (voice.fallback) { setTxt(''); voice.clearFallback(); } }, [voice.fallback]);
   return html`<button type="button" class=${'btn small ' + (voice.on ? '' : 'ghost')} style=${voice.on ? 'background:var(--danger);color:#fff' : ''} onClick=${voice.toggle} aria-pressed=${voice.on}>
       <${Icon} n="mic" size=${18} />${voice.on ? 'Ich höre zu …' : (label || 'Sprechen')}</button>
     ${txt !== null ? html`<${Sheet} title="Per Sprache eintragen" onClose=${() => setTxt(null)}>
-      <div class="sub" style="font-size:14px">Dieses Gerät hört nicht direkt zu. Tipp ins Feld und dann auf das Mikrofon deiner Tastatur – und sag z. B. „Termin morgen um 15 Uhr Zahnarzt für Dorothea“ oder „Aufgabe für Marlene Zimmer aufräumen jeden Abend“.</div>
+      <div class="sub" style="font-size:14px">Dieses Gerät hört nicht direkt zu. Tipp ins Feld und dann auf das Mikrofon deiner Tastatur – und sag ${example || 'z. B. „Termin morgen um 15 Uhr Zahnarzt für Dorothea“ oder „Aufgabe für Marlene Zimmer aufräumen jeden Abend“'}.</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <label class="field">Was soll eingetragen werden?<input id="voice-text" value=${txt} onInput=${e => setTxt(e.target.value)} placeholder="z. B. Termin Freitag 16 Uhr Turnen Marlene"
           onKeyDown=${e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); go(); } }} /></label>
@@ -1199,13 +1204,24 @@ async function readImage(file, prompt){
 }
 
 /* ---------- Spracheingabe ---------- */
+/* Diktier-Punkte entfernen: Handy-Tastaturen setzen beim Diktieren nach jeder Pause einen Punkt („Milch. Brot.“).
+   Punkte nach Buchstaben vor Leerzeichen/Ende fallen weg, Punkte nach Zahlen („12.“, „3.5.“) bleiben. */
+const cleanDictation = t => (t || '').replace(/([A-Za-zÄÖÜäöüß])\.(?=\s|$)/g, '$1').replace(/\s{2,}/g, ' ');
+(function(){
+  const fix = el => { if (!el || !(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') || /password|number|email|url/.test(el.type || '')) return false;
+    const v = el.value; const n = cleanDictation(v); if (n === v) return false;
+    const atEnd = el.selectionStart === v.length; const pos = Math.max(0, (el.selectionStart || 0) - (v.length - n.length));
+    el.value = n; try { el.setSelectionRange(atEnd ? n.length : pos, atEnd ? n.length : pos); } catch (e) {} return true; };
+  document.addEventListener('input', e => { if (!e.isComposing) fix(e.target); }, true);
+  document.addEventListener('compositionend', e => { if (fix(e.target)) e.target.dispatchEvent(new Event('input', { bubbles: true })); }, true);
+})();
 function useVoice(onText){
   const [on, setOn] = useState(false);
   const [fallback, setFallback] = useState(false);
   const rec = useRef(null);
   const start = () => {
     if (window.FamilienboardApp && window.FamilienboardApp.startSpeech){
-      window.onFamilienboardSpeech = t => { setOn(false); if (t) onText(t); };
+      window.onFamilienboardSpeech = t => { setOn(false); t = cleanDictation(t); if (t) onText(t); };
       try { window.FamilienboardApp.startSpeech(); setOn(true); setFallback(false); } catch (e) { setFallback(true); setOn(false); }
       return;
     }
@@ -1213,7 +1229,7 @@ function useVoice(onText){
     if (!SR){ setFallback(true); return; }
     try {
       const r = new SR(); r.lang = 'de-DE'; r.interimResults = false; r.maxAlternatives = 1;
-      r.onresult = e => { const t = e.results[0][0].transcript; if (t) onText(t); };
+      r.onresult = e => { const t = cleanDictation(e.results[0][0].transcript); if (t) onText(t); };
       r.onerror = () => { setFallback(true); setOn(false); };
       r.onend = () => setOn(false);
       rec.current = r; r.start(); setOn(true); setFallback(false);
@@ -1988,25 +2004,46 @@ const bdayIn = (b, y) => { const d = b.month === 2 && b.day === 29 && !isLeap(y)
 const bdayOn = (b, ds) => b && b.day && b.month && bdayIn(b, +ds.slice(0, 4)) === ds;
 const bdayNext = (b, today) => { const y = +today.slice(0, 4); const a = bdayIn(b, y); return a >= today ? a : bdayIn(b, y + 1); };
 const bdayAge = (b, ds) => b.year ? +ds.slice(0, 4) - b.year : null;
+/* Geburtstag aus gesprochenem Text: „Oma Rita 12. März 1956“, „Tom hat am 3.5. Geburtstag“ */
+const MON_WORDS = [['januar','jänner','jan'],['februar','feb'],['märz','maerz','marz','mär'],['april','apr'],['mai'],['juni','jun'],['juli','jul'],['august','aug'],['september','sept','sep'],['oktober','okt'],['november','nov'],['dezember','dez']];
+const ORD_WORDS = ['ersten','zweiten','dritten','vierten','fünften','sechsten','siebten','achten','neunten','zehnten','elften','zwölften','dreizehnten','vierzehnten','fünfzehnten','sechzehnten','siebzehnten','achtzehnten','neunzehnten','zwanzigsten','einundzwanzigsten','zweiundzwanzigsten','dreiundzwanzigsten','vierundzwanzigsten','fünfundzwanzigsten','sechsundzwanzigsten','siebenundzwanzigsten','achtundzwanzigsten','neunundzwanzigsten','dreißigsten','einunddreißigsten'];
+function parseBirthday(text){
+  let t = ' ' + (text || '').toLowerCase().replace(/[,!?]/g, ' ').replace(/\s+/g, ' ') + ' '; const out = { name:'', day:'', month:'', year:'' };
+  const y = t.match(/\b(19\d{2}|20\d{2})\b/); if (y) { out.year = y[1]; t = t.replace(y[0], ' '); }
+  let m = t.match(/\b(\d{1,2})\s*\.\s*(\d{1,2})\s*\.?/); if (m && +m[2] >= 1 && +m[2] <= 12) { out.day = +m[1]; out.month = +m[2]; t = t.replace(m[0], ' '); }
+  if (!out.month) { for (let i = 0; i < 12 && !out.month; i++) for (const w of MON_WORDS[i]) { const re = new RegExp('(\\b(\\d{1,2})\\s*\\.?\\s*|\\b(' + ORD_WORDS.join('|') + ')\\s+)?' + w + '\\b'); const mm = t.match(re);
+      if (mm) { out.month = i + 1; if (mm[2]) out.day = +mm[2]; else if (mm[3]) out.day = ORD_WORDS.indexOf(mm[3]) + 1; t = t.replace(mm[0], ' '); break; } } }
+  t = t.replace(/\b(hat|am|ist|wurde|geboren|geburtstag|trag|trage|eintragen|ein|bitte|von|vom|der|die|das|den|im|jahr|jahre|neuer|neuen|es|ich|mir|auf)\b/g, ' ').replace(/\b\d+\b/g, ' ').replace(/\s+/g, ' ').trim();
+  out.name = t.split(' ').filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+  return out;
+}
+const MON_SHORT = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const MON_MAX = [31,29,31,30,31,30,31,31,30,31,30,31];
 function BirthdayForm({ b, onDone }){
   const [f, setF] = useState(Object.assign({ name:'', day:'', month:'', year:'' }, b || {}));
+  const [nx, setNx] = useState(null); const monRef = useRef(null); const yearRef = useRef(null);
   const up = (k, v) => setF(o => Object.assign({}, o, { [k]: v }));
+  const pickDay = d => { up('day', d); if (!f.month) { setNx('month'); setTimeout(() => { try { monRef.current && monRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} }, 30); } };
+  const pickMonth = mo => { setF(o => Object.assign({}, o, { month: mo, day: o.day && o.day > MON_MAX[mo - 1] ? '' : o.day })); setNx(null);
+    if (!f.year) setTimeout(() => { try { yearRef.current && yearRef.current.focus(); } catch (e) {} }, 30); };
+  const fromVoice = r => { setF(o => Object.assign({}, o, { name: r.name || o.name, day: r.day || o.day, month: r.month || o.month, year: r.year || o.year }));
+    if (!r.name && !r.month) toast('Nicht verstanden – sag z. B. „Oma Rita 12. März 1956“'); };
   const save = e => { e.preventDefault(); const name = (f.name || '').trim(); const day = +f.day, month = +f.month, year = f.year ? +f.year : null;
     if (!name) { toast('Bitte einen Namen eingeben'); return; }
-    if (!month || !day || day > [31,29,31,30,31,30,31,31,30,31,30,31][month - 1]) { toast('Bitte Tag und Monat prüfen'); return; }
+    if (!day) { toast('Bitte den Tag antippen'); return; } if (!month) { toast('Bitte den Monat antippen'); return; }
+    if (day > MON_MAX[month - 1]) { toast('Diesen Tag gibt es im ' + MONATE[month - 1] + ' nicht'); return; }
     if (year && (year < 1900 || year > new Date().getFullYear())) { toast('Das Geburtsjahr stimmt nicht'); return; }
     const o = { name, day, month, year };
     if (b && b.id) S.set('birthdays/' + b.id, Object.assign({}, o, { createdAt: b.createdAt || Date.now() })); else S.add('birthdays', o);
     toast('Geburtstag von ' + name + ' gespeichert'); onDone(); };
   return html`<form class="card" style="background:var(--surface-2);display:flex;flex-direction:column;gap:12px" onSubmit=${save}>
-    <b style="font-size:17px">${b && b.id ? 'Geburtstag ändern' : 'Neuer Geburtstag'}</b>
+    <div class="row" style="justify-content:space-between"><b style="font-size:17px">${b && b.id ? 'Geburtstag ändern' : 'Neuer Geburtstag'}</b>
+      <${VoiceAdd} label="Einsprechen" parse=${parseBirthday} example="z. B. „Oma Rita 12. März 1956“" onResult=${fromVoice} /></div>
     <label class="field">Wer?<input id="bd-name" value=${f.name} onInput=${e => up('name', e.target.value)} placeholder="z. B. Oma Rita" autocomplete="off" /></label>
-    ${b && b.id ? null : html`<div class="row" style="gap:6px">${MEMBERS.map(m => html`<button type="button" class="chip" aria-pressed=${f.name === m.name} onClick=${() => up('name', m.name)}>${m.name}</button>`)}</div>`}
-    <div class="row" style="align-items:flex-end">
-      <label class="field" style="flex:1 1 80px">Tag<select id="bd-day" value=${f.day} onChange=${e => up('day', e.target.value)}><option value="">–</option>${Array.from({ length: 31 }, (x, i) => html`<option value=${i + 1}>${i + 1}.</option>`)}</select></label>
-      <label class="field" style="flex:2 1 140px">Monat<select id="bd-month" value=${f.month} onChange=${e => up('month', e.target.value)}><option value="">–</option>${MONATE.map((m, i) => html`<option value=${i + 1}>${m}</option>`)}</select></label>
-      <label class="field" style="flex:1 1 100px">Jahr (optional)<input id="bd-year" inputmode="numeric" value=${f.year || ''} onInput=${e => up('year', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="z. B. 1956" /></label>
-    </div>
+    <div class="field">Tag<div class="daygrid" role="group" aria-label="Tag">${Array.from({ length: 31 }, (x, i) => i + 1).map(d => html`<button type="button" aria-pressed=${+f.day === d} disabled=${f.month && d > MON_MAX[f.month - 1]} onClick=${() => pickDay(d)}>${d}</button>`)}</div></div>
+    <div class=${'field bdstep' + (nx === 'month' ? ' next' : '')} ref=${monRef}>Monat${nx === 'month' ? html` <span class="sub" style="font-size:13px">– jetzt den Monat antippen</span>` : null}
+      <div class="mongrid" role="group" aria-label="Monat">${MON_SHORT.map((mo, i) => html`<button type="button" aria-pressed=${+f.month === i + 1} aria-label=${MONATE[i]} onClick=${() => pickMonth(i + 1)}>${mo}</button>`)}</div></div>
+    <label class="field">Jahr (optional)<input id="bd-year" ref=${yearRef} type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" value=${f.year || ''} onInput=${e => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); e.target.value = v; up('year', v); }} placeholder="z. B. 1956" /></label>
     <div class="row"><button class="btn" type="submit" style="flex:1">Speichern</button><button type="button" class="btn ghost" onClick=${onDone}>Abbrechen</button></div>
   </form>`;
 }
@@ -3031,7 +3068,7 @@ const tpBox = document.createElement('div'); document.body.appendChild(tpBox); r
 const taskBox = document.createElement('div'); document.body.appendChild(taskBox); render(html`<${TaskHost} />`, taskBox);
 const pinBox = document.createElement('div'); document.body.appendChild(pinBox); render(html`<${PinHost} />`, pinBox);
 /* Automatisch aktualisieren: alle 10 Minuten nachsehen, ob eine neue Version online ist */
-const APP_VER = '50';
+const APP_VER = '53';
 function UpdateBar(){
   const [nv, setNv] = useState(null);
   useEffect(() => { const chk = async () => { try { const t = await fetch('index.html?u=' + Date.now(), { cache: 'no-store' }).then(r => r.text());
