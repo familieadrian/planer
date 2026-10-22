@@ -351,8 +351,8 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
 .pinkeys button{height:68px;border-radius:18px;border:none;background:var(--surface-2);color:var(--fg);font-size:28px;font-weight:800}
 .lockmini{display:inline-flex;vertical-align:-2px;margin-left:4px}
 .avatar-tap{border:none;background:transparent;padding:0;border-radius:50%;cursor:pointer}
-.editrow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-4px 0 4px}
-.editrow .chip{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:38px;padding:4px 6px;font-size:12px;min-width:0;white-space:nowrap}
+.editrow{display:flex;justify-content:flex-end;gap:6px;margin:-4px 0 4px}
+.editrow .chip{display:inline-flex;align-items:center;justify-content:center;width:44px;height:40px;min-height:0;padding:0;min-width:0;border-radius:12px;color:var(--muted)}.editrow .chip:last-child{color:var(--danger)}
 .editrow .chip.on{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent)}
 /* ---------- Kompakte Kacheln für die Personen-Spalten ---------- */
 @media (max-width:820px){
@@ -365,7 +365,7 @@ button.lbs[aria-expanded="true"] .chev{transform:rotate(-90deg)}
   .task .ic{width:32px;height:32px;border-radius:9px}.task .ic svg{width:20px;height:20px}
   .task .lbl{font-size:13px}
   .task .chk{width:24px;height:24px}
-  .editrow .chip{font-size:11px;min-height:32px}
+  .editrow .chip{width:38px;height:36px}
 }
 @media (min-width:560px) and (max-width:820px){ .cols{grid-template-columns:repeat(3,minmax(0,1fr))} }
 @media (max-width:340px){ .cols{grid-template-columns:1fr} }
@@ -1718,7 +1718,7 @@ function Heute({ now }){
     </a>` : null}
     <${Todos} today=${today} />
     ${locked ? html`<div class="hint warn" role="status">${past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei. Du siehst, was erledigt wurde – abhaken geht nicht mehr.' : 'Vorschau: ' + SLOTS[slotIdx(mode)].name + '-Aufgaben kann man ab ' + SLOTS[slotIdx(mode)].from + ' Uhr abhaken.'} <a href="#" onClick=${e => { e.preventDefault(); setMode(slot.id); }} style="color:inherit">Zurück zu jetzt</a></div>` : null}
-    ${edit ? html`<div class="hint">Tipp: Doppelt auf eine Aufgabe tippen schützt sie mit Schloss. Bearbeiten: Unter jeder Aufgabe „Schloss“ antippen, um sie mit der PIN der Person zu schützen (oder „Geschützt“, um das Schloss wieder zu öffnen). Verschieben: Aufgabe lange gedrückt halten und zu einer anderen Person ziehen – oder unten auf den Mülleimer, um sie zu löschen.<div style="margin-top:8px"><button type="button" class="btn small" onClick=${() => openTasks()}><${Icon} n="edit" size=${16} />Alle Aufgaben verwalten (auch wiederkehrende)</button></div></div>` : null}
+    ${edit ? html`<div class="hint">Unter jeder Aufgabe: Schloss = mit PIN schützen, Stift = ändern, Mülleimer = löschen. Verschieben: lange drücken und zu einer anderen Person ziehen. Neue Aufgabe: + bei der Person.<div style="margin-top:8px"><button type="button" class="btn small" onClick=${() => openTasks()}><${Icon} n="edit" size=${16} />Alle Aufgaben verwalten</button></div></div>` : null}
     ${routines === undefined ? html`<div class="loading">Routinen werden geladen …</div>` : html`
     <div class="cols">
       ${MEMBERS.map(m => {
@@ -1746,7 +1746,7 @@ function Heute({ now }){
               </button>
               ${m.speak && canSpeak ? html`<button type="button" class="iconbtn spk" aria-label=${'Vorlesen: ' + t.label} onClick=${() => sayIt(t.label)}><${Icon} n="speaker" size=${20} /></button>` : null}
             </div>
-            ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockPT(t)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${16} />${t.lock ? 'Geschützt' : 'Schloss'}</button><button type="button" class="chip" aria-label=${t.label + ' ändern'} onClick=${() => openTasks({ pt: t.id })}><${Icon} n="edit" size=${16} />Ändern</button><button type="button" class="chip" aria-label=${t.label + ' löschen'} onClick=${() => delPT(t)}><${Icon} n="bin" size=${16} />Löschen</button></div>` : null}`; })}
+            ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockPT(t)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${20} /></button><button type="button" class="chip" aria-label=${t.label + ' ändern'} onClick=${() => openTasks({ pt: t.id })}><${Icon} n="edit" size=${20} /></button><button type="button" class="chip" aria-label=${t.label + ' löschen'} onClick=${() => delPT(t)}><${Icon} n="bin" size=${20} /></button></div>` : null}`; })}
           ${[['tag', tagList], [mode, list]].map(([md, L]) => L.map((t, i) => { if (!vis(t) && !edit) return null; const d = !!(checks && checks[m.id + '-' + md + '-' + i]); const lk = md !== 'tag' && locked;
             return html`<div style="display:flex;gap:6px;align-items:center">
               <button type="button" class=${'task' + (drag && drag.mid === m.id && drag.i === i && drag.md === md ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')}
@@ -1758,8 +1758,7 @@ function Heute({ now }){
               </button>
               ${m.speak && canSpeak ? html`<button type="button" class="iconbtn spk" aria-label=${'Vorlesen: ' + t.label} onClick=${() => sayIt(t.label)}><${Icon} n="speaker" size=${20} /></button>` : null}
             </div>
-            ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockTask(m.id, i, md)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${16} />${t.lock ? 'Geschützt' : 'Schloss'}</button><button type="button" class="chip" aria-label=${t.label + ' ändern'} onClick=${() => openTasks({ rt: { md, mid: m.id, i } })}><${Icon} n="edit" size=${16} />Ändern</button><button type="button" class="chip" aria-label=${t.label + ' entfernen'} onClick=${() => delTask(m.id, i, md)}><${Icon} n="bin" size=${16} />Löschen</button></div>` : null}`; }))}
-          ${edit ? html`<${AddTask} onAdd=${t => setList(m.id, list.concat([t]))} />` : null}
+            ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockTask(m.id, i, md)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${20} /></button><button type="button" class="chip" aria-label=${t.label + ' ändern'} onClick=${() => openTasks({ rt: { md, mid: m.id, i } })}><${Icon} n="edit" size=${20} /></button><button type="button" class="chip" aria-label=${t.label + ' entfernen'} onClick=${() => delTask(m.id, i, md)}><${Icon} n="bin" size=${20} /></button></div>` : null}`; }))}
           ${!list.length && !tagList.length && !pts.length && !edit ? html`<div class="sub" style="font-size:14px">Keine Aufgaben. Mit + hinzufügen.</div>` : null}
           <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:4px">
             ${all ? html`<div class="done-badge" style=${'background:' + mt(m.id)}><${Star} size=${20} />Geschafft!</div>` : null}
@@ -3024,7 +3023,7 @@ const tpBox = document.createElement('div'); document.body.appendChild(tpBox); r
 const taskBox = document.createElement('div'); document.body.appendChild(taskBox); render(html`<${TaskHost} />`, taskBox);
 const pinBox = document.createElement('div'); document.body.appendChild(pinBox); render(html`<${PinHost} />`, pinBox);
 /* Automatisch aktualisieren: alle 10 Minuten nachsehen, ob eine neue Version online ist */
-const APP_VER = '47';
+const APP_VER = '48';
 function UpdateBar(){
   const [nv, setNv] = useState(null);
   useEffect(() => { const chk = async () => { try { const t = await fetch('index.html?u=' + Date.now(), { cache: 'no-store' }).then(r => r.text());
