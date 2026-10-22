@@ -2729,7 +2729,7 @@ function Sterne({ now }){
   if (points === undefined) return html`<div class="loading">Sterne werden geladen …</div>`;
   return html`
     <div class="head">
-      <div><h1>Sterne & Level</h1><div class="sub">Sterne gibt es für Routinen und für Aufgaben für alle.</div></div>
+      <div><h1>Sterne & Level</h1><div class="sub">Sterne gibt es für eigene Aufgaben und für Aufgaben für alle.</div></div>
       <div class="row">
         <div class="seg" role="group" aria-label="Zeitraum">
           <button type="button" aria-pressed=${mode === 'woche'} onClick=${() => setMode('woche')}>Diese Woche</button>
@@ -2784,6 +2784,9 @@ function Sterne({ now }){
     ${DEMO ? null : html`<${BackupCard} />`}
     ${edit ? html`<${RewardEdit} R=${R} rw=${rw} fr=${fr} onClose=${() => setEdit(false)} />` : null}`;
 }
+/* Häkchen von früher, deren Aufgabe es nicht mehr gibt (gelöscht oder verschoben) */
+const logUnknown = e => e.kind === 'routine' && (!e.what || e.what === 'Routine');
+const logWhat = e => logUnknown(e) ? 'Ältere Aufgabe' : e.what;
 function StarStats({ id, now, points, week }){
   const all = useCol('starlog');
   const [fix, setFix] = useState(null); const [del, setDel] = useState(null); const [more, setMore] = useState(false);
@@ -2795,7 +2798,7 @@ function StarStats({ id, now, points, week }){
   const lastW = sum(mine.filter(e => e.date >= lastMon && e.date < mon));
   const days = [6,5,4,3,2,1,0].map(n => { const d = addDays(now, -n); const ds = iso(d); return { d, v: sum(mine.filter(e => e.date === ds)) }; });
   const mx = Math.max(1, ...days.map(x => x.v));
-  const cnt = {}; mine.forEach(e => { cnt[e.what] = (cnt[e.what] || 0) + 1; });
+  const cnt = {}; mine.forEach(e => { if (logUnknown(e) || e.kind === 'alt') return; cnt[e.what] = (cnt[e.what] || 0) + 1; });
   const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 6);
   const shown = more ? mine.slice(0, 100) : mine.slice(0, 12);
   return html`<div class="stats">
@@ -2810,7 +2813,7 @@ function StarStats({ id, now, points, week }){
     ${top.length ? html`<div class="field">Am häufigsten erledigt<div class="top">${top.map(w => html`<span>${w} · ${cnt[w]}×</span>`)}</div></div>` : null}
     <div class="field">Was wurde erledigt? Falsch eingetragen → „Ändern“ (andere Person) oder „Abwählen“.
       ${mine.length ? html`<div class="list">${shown.map(e => html`<div class="logli">
-        <span class="lt"><b>${e.what}</b><span>${fromIso(e.date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' })} · ${e.kind === 'todo' ? 'Aufgabe für alle' + (e.team ? ' (mit ' + names(e.team.filter(x => x !== id)) + ')' : '') : e.kind === 'ptask' ? 'Einzelaufgabe' : e.kind === 'alt' ? 'gesammelt vor der Statistik – welche Aufgabe, ist nicht mehr bekannt' : 'Routine ' + (e.mode === 'tag' ? 'ganztags' : (SLOTS[slotIdx(e.mode || 'morgen')] || SLOTS[0]).adv)}</span></span>
+        <span class="lt"><b>${logWhat(e)}</b><span>${fromIso(e.date).toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'numeric' })} · ${e.kind === 'todo' ? 'Aufgabe für alle' + (e.team ? ' (mit ' + names(e.team.filter(x => x !== id)) + ')' : '') : e.kind === 'ptask' ? 'Einzelaufgabe' : e.kind === 'alt' ? 'gesammelt vor der Statistik – welche Aufgabe, ist nicht mehr bekannt' : (logUnknown(e) ? 'Name nicht mehr bekannt (Aufgabe gelöscht oder verschoben) · ' : 'Tägliche Aufgabe · ') + (e.mode === 'tag' ? 'ganztags' : (SLOTS[slotIdx(e.mode || 'morgen')] || SLOTS[0]).adv)}</span></span>
         <span class="ls">${e.stars ? html`<${Star} size=${16} />+${fmtS(e.stars)}` : html`<span style="font-size:12px;color:var(--muted)">ohne Stern</span>`}</span>
         ${fix === e.id ? html`<div class="row" style="gap:6px;width:100%"><span style="font-weight:800;font-size:14px">Wer hat es wirklich gemacht?</span>${MEMBERS.filter(m => m.id !== id).map(m => html`<button type="button" class="chip" onClick=${async () => { if (!(await needPin(e.who, 'Eintrag von ' + byId[e.who].name + ' ändern'))) return; logFix(e, m.id, mem_.docs['points/all'] || points); setFix(null); }}>${m.name}</button>`)}<button type="button" class="chip" onClick=${() => setFix(null)}>Abbrechen</button></div>`
           : del === e.id ? html`<div class="row" style="gap:6px"><span style="font-weight:800;font-size:14px">Wirklich abwählen? Die Sterne werden abgezogen.</span><button type="button" class="btn small" style="background:var(--danger);color:#fff" onClick=${async () => { if (!(await needPin(e.who, 'Eintrag von ' + byId[e.who].name + ' abwählen'))) return; logFix(e, null, mem_.docs['points/all'] || points); setDel(null); }}>Abwählen</button><button type="button" class="btn small ghost" onClick=${() => setDel(null)}>Nein</button></div>`
@@ -3023,7 +3026,7 @@ const tpBox = document.createElement('div'); document.body.appendChild(tpBox); r
 const taskBox = document.createElement('div'); document.body.appendChild(taskBox); render(html`<${TaskHost} />`, taskBox);
 const pinBox = document.createElement('div'); document.body.appendChild(pinBox); render(html`<${PinHost} />`, pinBox);
 /* Automatisch aktualisieren: alle 10 Minuten nachsehen, ob eine neue Version online ist */
-const APP_VER = '48';
+const APP_VER = '49';
 function UpdateBar(){
   const [nv, setNv] = useState(null);
   useEffect(() => { const chk = async () => { try { const t = await fetch('index.html?u=' + Date.now(), { cache: 'no-store' }).then(r => r.text());
