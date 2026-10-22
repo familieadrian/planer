@@ -1206,7 +1206,10 @@ async function readImage(file, prompt){
 /* ---------- Spracheingabe ---------- */
 /* Diktier-Punkte entfernen: Handy-Tastaturen setzen beim Diktieren nach jeder Pause einen Punkt („Milch. Brot.“).
    Punkte nach Buchstaben vor Leerzeichen/Ende fallen weg, Punkte nach Zahlen („12.“, „3.5.“) bleiben. */
-const cleanDictation = t => (t || '').replace(/([A-Za-zÄÖÜäöüß])\.(?=\s|$)/g, '$1').replace(/\s{2,}/g, ' ');
+/* Kleine Wörter, die mitten im Satz immer kleingeschrieben werden – die Diktierfunktion schreibt sie nach ihrem Punkt groß */
+const SMALL_WORDS = new Set('mit und oder aber am im um für von vom zum zur bei beim in an auf aus nach vor über unter zu bis ab ohne gegen durch seit wegen der die das den dem des ein eine einen einem einer ist sind hat haben wird werden nicht auch noch schon dann mal bitte sowie jeden jede jeder alle heute gestern übermorgen abends morgens mittags nachmittags wieder'.split(' '));
+const cleanDictation = t => (t || '').replace(/([A-Za-zÄÖÜäöüß])\.(?=\s|$)/g, '$1').replace(/\s{2,}/g, ' ')
+  .split(/(\s+)/).map((w, i) => i > 0 && /^[A-ZÄÖÜ][a-zäöüß]+[.,!?]?$/.test(w) && SMALL_WORDS.has(w.replace(/[.,!?]$/, '').toLowerCase()) ? w.toLowerCase() : w).join('');
 (function(){
   const fix = el => { if (!el || !(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') || /password|number|email|url/.test(el.type || '')) return false;
     const v = el.value; const n = cleanDictation(v); if (n === v) return false;
@@ -3068,7 +3071,7 @@ const tpBox = document.createElement('div'); document.body.appendChild(tpBox); r
 const taskBox = document.createElement('div'); document.body.appendChild(taskBox); render(html`<${TaskHost} />`, taskBox);
 const pinBox = document.createElement('div'); document.body.appendChild(pinBox); render(html`<${PinHost} />`, pinBox);
 /* Automatisch aktualisieren: alle 10 Minuten nachsehen, ob eine neue Version online ist */
-const APP_VER = '53';
+const APP_VER = '55';
 function UpdateBar(){
   const [nv, setNv] = useState(null);
   useEffect(() => { const chk = async () => { try { const t = await fetch('index.html?u=' + Date.now(), { cache: 'no-store' }).then(r => r.text());
