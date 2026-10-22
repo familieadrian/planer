@@ -87,7 +87,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .field{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:800;color:var(--muted);min-width:0}
 .field input,.field select,.input{height:48px;border:2px solid var(--line);border-radius:14px;padding:0 14px;font-size:16px;font-weight:700;color:var(--fg);background:var(--surface);box-sizing:border-box;width:100%;min-width:0}
 .avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;box-sizing:border-box}
-.avatar-btn{width:52px;height:52px;font-size:19px;border:3px solid transparent}
+.avatar-btn{width:52px;height:52px;font-size:19px;border:3px solid transparent;padding:0}
+.famring{width:100%;height:100%;border-radius:50%;padding:4px;box-sizing:border-box;display:flex}.faminner{flex:1;border-radius:50%;background:var(--surface);color:var(--fg);display:flex;align-items:center;justify-content:center}.faminner svg{width:58%;height:58%}
 .empty{border:2px dashed var(--line);border-radius:20px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;color:var(--muted);font-weight:700}
 .empty strong{color:var(--fg);font-size:17px}
 .clock{font-size:44px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums}
@@ -1230,7 +1231,11 @@ function VoiceHint({ voice }){
 }
 
 /* ---------- Bausteine ---------- */
+/* „Alle“: Ring aus allen Familienfarben mit Familien-Symbol */
+const famGrad = () => { const c = MEMBERS.map(m => mc(m.id)); const n = c.length || 1; return 'conic-gradient(' + c.map((x, i) => x + ' ' + (i * 100 / n) + '% ' + ((i + 1) * 100 / n) + '%').join(',') + ')'; };
+function FamIcon(){ return html`<span class="famring" style=${'background:' + famGrad()} aria-hidden="true"><span class="faminner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d=${IC.users} /></svg></span></span>`; }
 function Avatar({ id, size = 40, ring }){
+  if (id === 'familie') return html`<span class="avatar" style=${'width:' + size + 'px;height:' + size + 'px'} title="Alle"><${FamIcon} /></span>`;
   return html`<span class="avatar" style=${'width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size*.42) + 'px;background:' + mt(id) + ';color:' + mc(id) + (ring ? ';border:3px solid ' + mc(id) : '')}>${ini(id)}</span>`;
 }
 /* Termine können mehreren Personen gehören: whos = [ids]; who bleibt die erste Person (für ältere Geräte) */
@@ -1245,14 +1250,14 @@ function MultiWho({ value, onChange }){
   return html`<div class="row" role="group" aria-label="Für wen? (mehrere möglich)" style="gap:8px">
     ${WHO.map(m => { const on = fam || value.indexOf(m.id) >= 0;
       return html`<button type="button" class="avatar avatar-btn" aria-pressed=${on} aria-label=${m.name} title=${m.name}
-      style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (on ? mc(m.id) : 'transparent')} onClick=${() => flip(m.id)}>${m.id === 'familie' ? 'A' : ini(m.id)}</button>`; })}
+      style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (on ? mc(m.id) : 'transparent')} onClick=${() => flip(m.id)}>${m.id === 'familie' ? html`<${FamIcon} />` : ini(m.id)}</button>`; })}
   </div>`;
 }
 function WhoPicker({ value, onChange, list = MEMBERS, label = 'Person' }){
   return html`<div class="row" role="group" aria-label=${label} style="gap:8px">
     ${list.map(m => html`<button type="button" class="avatar avatar-btn" aria-pressed=${value === m.id} aria-label=${m.name} title=${m.name}
       style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + (value === m.id ? mc(m.id) : 'transparent')}
-      onClick=${() => onChange(m.id)}>${m.id === 'familie' ? 'A' : ini(m.id)}</button>`)}
+      onClick=${() => onChange(m.id)}>${m.id === 'familie' ? html`<${FamIcon} />` : ini(m.id)}</button>`)}
   </div>`;
 }
 function Sheet({ title, onClose, children, wide }){
@@ -1930,7 +1935,7 @@ function Kalender({ now }){
         <div class="row" role="group" aria-label="Personen ein- und ausblenden" style="gap:6px">
           ${WHO.map(m => html`<button type="button" class="avatar avatar-btn cb-av" aria-pressed=${!hidden[m.id]} aria-label=${m.name + (hidden[m.id] ? ' einblenden' : ' ausblenden')} title=${m.name}
             style=${'background:' + mt(m.id) + ';color:' + mc(m.id) + ';border-color:' + mc(m.id) + ';opacity:' + (hidden[m.id] ? .35 : 1)}
-            onClick=${() => setHidden(Object.assign({}, hidden, { [m.id]: !hidden[m.id] }))}>${m.id === 'familie' ? 'A' : ini(m.id)}</button>`)}
+            onClick=${() => setHidden(Object.assign({}, hidden, { [m.id]: !hidden[m.id] }))}>${m.id === 'familie' ? html`<${FamIcon} />` : ini(m.id)}</button>`)}
         </div>
         <div class="seg" role="group" aria-label="Was anzeigen?">
           <button type="button" aria-pressed=${!onlyEv} onClick=${() => setOnly(false)}><${Icon} n="check" size=${18} /><span class="cb-long">Termine & Erledigtes</span><span class="cb-short">Alles</span></button>
@@ -2892,7 +2897,7 @@ render(html`<${App} />`, document.getElementById('root'));
 const tpBox = document.createElement('div'); document.body.appendChild(tpBox); render(html`<${TypePreview} />`, tpBox);
 const pinBox = document.createElement('div'); document.body.appendChild(pinBox); render(html`<${PinHost} />`, pinBox);
 /* Automatisch aktualisieren: alle 10 Minuten nachsehen, ob eine neue Version online ist */
-const APP_VER = '44';
+const APP_VER = '45';
 function UpdateBar(){
   const [nv, setNv] = useState(null);
   useEffect(() => { const chk = async () => { try { const t = await fetch('index.html?u=' + Date.now(), { cache: 'no-store' }).then(r => r.text());
