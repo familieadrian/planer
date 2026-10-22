@@ -303,7 +303,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .step .sx b{font-size:15px}.step .sx span{font-size:13px;color:var(--muted);font-weight:600}
 .claimed{font-size:13px;font-weight:800;color:var(--ok-ink);background:var(--ok-soft);padding:5px 10px;border-radius:999px;flex-shrink:0}
 /* ---------- Aufgaben verschieben ---------- */
-.task{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.task,.todo{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .task.lifted{opacity:.35}
 .trashzone{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:290;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:200px;height:110px;border-radius:28px;background:var(--surface);color:var(--danger);border:3px dashed var(--danger);box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:13px;font-weight:800;animation:trashin .18s ease-out;transition:transform .12s,background .12s}
 .trashzone.over{background:var(--danger);color:#fff;border-style:solid;transform:translateX(-50%) scale(1.12)}
@@ -1369,7 +1369,7 @@ function TypePreview(){
       <button type="button" class="btn small" onPointerDown=${e => e.preventDefault()} onClick=${done}>${st.quick ? html`<${Icon} n="plus" size=${18} />Hinzufügen` : 'Fertig'}</button>
     </div></div>`;
 }
-function Todos({ today }){
+function Todos({ today, onPress, skip }){
   const todos = useCol('todos') || [];
   const [sel, setSel] = useState(null); const [add, setAdd] = useState(false); const [voice, setVoice] = useState(null);
   const curSlot = slotOf(new Date()).id;
@@ -1380,7 +1380,7 @@ function Todos({ today }){
         <button type="button" class="btn small ghost" onClick=${() => setAdd('event')}><${Icon} n="plus" size=${18} />Termin</button>
         <button type="button" class="btn small ghost" onClick=${() => setAdd('todo')}><${Icon} n="plus" size=${18} />Aufgabe für alle</button></div></div>
     ${list.length ? html`<div class="todolist">${list.map(t => { const ws = whoOf(t, today); const who = ws[0];
-      return html`<button type="button" class=${'todo' + (who ? ' done' : '')} onClick=${() => setSel(t)} style=${who ? 'background:' + mt(who) + ';border-color:' + mc(who) : ''}
+      return html`<button type="button" class=${'todo' + (who ? ' done' : '')} onPointerDown=${e => onPress && onPress(e, t)} onContextMenu=${e => e.preventDefault()} onClick=${() => { if (skip && skip.current) return; setSel(t); }} style=${who ? 'background:' + mt(who) + ';border-color:' + mc(who) : ''}
         aria-label=${t.title + (who ? ', erledigt von ' + names(ws) : ', offen')}>
         ${who ? html`<span style="display:flex">${ws.map((w, i) => html`<span style=${i ? 'margin-left:-12px' : ''}><${Avatar} id=${w} size=${36} ring=${true} /></span>`)}</span>` : html`<span class="tb"></span>`}
         <span style="display:flex;flex-direction:column;gap:2px"><span>${t.title}${t.lockedBy && byId[t.lockedBy] ? html`<span class="lockmini" title=${'reserviert für ' + byId[t.lockedBy].name}><${Icon} n="lock" size=${14} /></span>` : null}</span>
@@ -1628,7 +1628,11 @@ function Heute({ now }){
     if (t && t.lock && !(await needPin(mid, 'Geschützte Aufgabe löschen'))) return; setList(mid, list.filter((x, j) => j !== i), md); };
   const lockPT = async t => { if (!hasPin(t.who) && !(await createPin(t.who))) return;
     if (t.lock && !(await needPin(t.who, 'Schloss öffnen'))) return; const b = Object.assign({}, t, { lock: !t.lock }); delete b.id; S.set('ptasks/' + t.id, b); };
-  const delPT = async t => { if (t.lock && !(await needPin(t.who, 'Geschützte Aufgabe löschen'))) return; S.del('ptasks/' + t.id); };
+  const delPT = async t => { if (t.lock && !(await needPin(t.who, 'Geschützte Aufgabe löschen'))) return false; S.del('ptasks/' + t.id); return true; };
+  const movePT = async (t, to) => { if (t.lock && !(await needPin(t.who, '„' + t.label + '“ hat ein Schloss – zum Verschieben PIN von ' + byId[t.who].name))) return;
+    const b = Object.assign({}, mem_.docs['ptasks/' + t.id] || t, { who: to }); delete b.id; S.set('ptasks/' + t.id, b); toast('„' + t.label + '“ ist jetzt bei ' + byId[to].name); };
+  const trashTodo = async t => { if (t.lockedBy && byId[t.lockedBy] && !(await needPin(t.lockedBy, 'Reserviert für ' + byId[t.lockedBy].name + ' – zum Löschen PIN'))) return;
+    S.del('todos/' + t.id); toast('„' + t.title + '“ gelöscht'); };
   const [prof, setProf] = useState(null);
   const tapRef = useRef({});
   const onTap = (key, el, single, dbl) => { const tp = tapRef.current;
@@ -1677,17 +1681,18 @@ function Heute({ now }){
     const up = e => { const p = press.current; if (!p) return; clearTimeout(p.timer); press.current = null;
       if (p.active) { skipClick.current = true; setTimeout(() => { skipClick.current = false; }, 400);
         const d = dragRef.current; dragRef.current = null; setDrag(null);
-        if (d && d.over === 'trash' && e.type !== 'pointercancel') trashTask(d.mid, d.i, d.md);
-        else if (d && d.over && d.over !== d.mid && e.type !== 'pointercancel') moveTask(d.mid, d.i, d.over, d.md); } };
+        if (!d || e.type === 'pointercancel') return;
+        if (d.over === 'trash') { if (d.kind === 'pt') delPT(d.t).then(ok => ok !== false && toast('„' + d.t.label + '“ gelöscht')); else if (d.kind === 'td') trashTodo(d.t.todo); else trashTask(d.mid, d.i, d.md); }
+        else if (d.over && d.over !== d.mid && byId[d.over] && d.kind !== 'td') { if (d.kind === 'pt') movePT(d.t, d.over); else moveTask(d.mid, d.i, d.over, d.md); } } };
     const tm = e => { if (press.current && press.current.active) e.preventDefault(); };
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
     document.addEventListener('touchmove', tm, { passive: false });
     return () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); document.removeEventListener('touchmove', tm); };
   });
-  const startPress = (e, mid, i, t, md) => { if (e.button) return;
+  const startPress = (e, mid, i, t, md, kind) => { if (e.button) return;
     const p = { x: e.clientX, y: e.clientY, active: false };
     p.timer = setTimeout(() => { p.active = true; try { navigator.vibrate && navigator.vibrate(30); } catch (x) {}
-      const d = { mid, i, t, md: md || mode, x: p.x, y: p.y, over: mid }; dragRef.current = d; setDrag(d); }, 450);
+      const d = { mid, i, t, md: md || mode, kind: kind || 'rt', x: p.x, y: p.y, over: mid }; dragRef.current = d; setDrag(d); }, 450);
     press.current = p; };
   const greet = { morgen:'Guten Morgen! Los geht’s.', mittag:'Mahlzeit! Was steht heute Nachmittag an?', abend:'Guten Abend! Zeit zum Runterkommen.' }[slot.id];
   return html`
@@ -1716,7 +1721,7 @@ function Heute({ now }){
       ${chips.map(e => html`<span class="tchip"><${Dots} ids=${evWhos(e)} />${e.time ? e.time + ' ' : ''}${e.title}</span>`)}
       ${soonExams.map(x => html`<span class="tchip exam">${countdown(daysUntil(x.datum, now))}: ${x.fach} (${byId[x.kid] ? byId[x.kid].name : ''})</span>`)}
     </a>` : null}
-    <${Todos} today=${today} />
+    <${Todos} today=${today} onPress=${(e, t) => startPress(e, null, null, { label: t.title, icon: 'star', todo: t }, null, 'td')} skip=${skipClick} />
     ${locked ? html`<div class="hint warn" role="status">${past ? 'Der ' + SLOTS[slotIdx(mode)].name + ' ist vorbei. Du siehst, was erledigt wurde – abhaken geht nicht mehr.' : 'Vorschau: ' + SLOTS[slotIdx(mode)].name + '-Aufgaben kann man ab ' + SLOTS[slotIdx(mode)].from + ' Uhr abhaken.'} <a href="#" onClick=${e => { e.preventDefault(); setMode(slot.id); }} style="color:inherit">Zurück zu jetzt</a></div>` : null}
     ${edit ? html`<div class="hint">Unter jeder Aufgabe: Schloss = mit PIN schützen, Stift = ändern, Mülleimer = löschen. Verschieben: lange drücken und zu einer anderen Person ziehen. Neue Aufgabe: + bei der Person.<div style="margin-top:8px"><button type="button" class="btn small" onClick=${() => openTasks()}><${Icon} n="edit" size=${16} />Alle Aufgaben verwalten</button></div></div>` : null}
     ${routines === undefined ? html`<div class="loading">Routinen werden geladen …</div>` : html`
@@ -1730,7 +1735,7 @@ function Heute({ now }){
         const n = cnt(list, mode) + cnt(tagList, 'tag') + pts.filter(t => t.done && (!t.every || t.doneOn === today)).length;
         const tot = list.filter(vis).length + tagList.filter(vis).length + pts.length;
         const all = tot > 0 && n === tot;
-        return html`<section class=${'col' + (drag && drag.over === m.id && drag.mid !== m.id ? ' dropover' : '')} data-mid=${m.id} aria-label=${m.name}>
+        return html`<section class=${'col' + (drag && drag.kind !== 'td' && drag.over === m.id && drag.mid !== m.id ? ' dropover' : '')} data-mid=${m.id} aria-label=${m.name}>
           <div class="colhead">
             <button type="button" class="avatar-tap" aria-label=${'Profil von ' + m.name + ' öffnen'} onClick=${() => setProf(m.id)}><span class="avatar" style=${'background:' + mt(m.id) + ';border-color:' + mc(m.id) + ';color:' + mc(m.id)}>${ini(m.id)}</span></button>
             <div style="min-width:0"><div class="colname" role="button" tabindex="0" onClick=${() => setProf(m.id)} style="cursor:pointer">${m.name}${pinsDoc()[m.id] && pinsDoc()[m.id].pin ? html`<span class="lockmini"><${Icon} n="lock" size=${14} /></span>` : null}</div>
@@ -1739,7 +1744,7 @@ function Heute({ now }){
           </div>
           ${pts.map(t => { const d = !!(t.done && (!t.every || t.doneOn === today)); const late = !d && !t.every && t.date < today;
             return html`<div style="display:flex;gap:6px;align-items:center">
-              <button type="button" class="task" aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onClick=${e => onTap('p' + t.id, e.currentTarget, el => togglePT(t, el), () => lockPT(t))} style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed') + (t.slot && locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
+              <button type="button" class=${'task' + (drag && drag.kind === 'pt' && drag.t.id === t.id ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')} onPointerDown=${e => startPress(e, m.id, null, t, null, 'pt')} onContextMenu=${e => e.preventDefault()} onClick=${e => { if (skipClick.current) return; onTap('p' + t.id, e.currentTarget, el => togglePT(t, el), () => lockPT(t)); }} style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : 'border-style:dashed') + (t.slot && locked && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon || 'star'} size=${28} color=${mc(m.id)} /></span>
                 <span class="lbl">${t.label}${t.lock ? html`<span class="lockmini" aria-label="mit Schloss"><${Icon} n="lock" size=${15} /></span>` : null}<span class="when" style=${late ? 'color:var(--warn-ink)' : ''}>${t.every ? everyTxt(t.every) + (t.lastDone && !d ? ' · zuletzt ' + dm(fromIso(t.lastDone)) : '') : late ? 'seit ' + WD[fromIso(t.date).getDay()] + ' ' + dm(fromIso(t.date)) : t.slot ? 'nur heute ' + SLOTS[slotIdx(t.slot)].adv : 'nur heute'}</span></span>
                 <span class="chk" style=${d ? 'background:' + mc(m.id) + ';border-color:' + mc(m.id) : ''}>${d ? html`<${Icon} n="check" size=${18} sw=${3} color="var(--on-m)" />` : null}</span>
@@ -1749,7 +1754,7 @@ function Heute({ now }){
             ${edit ? html`<div class="editrow"><button type="button" class=${'chip' + (t.lock ? ' on' : '')} aria-label=${t.label + (t.lock ? ' Schloss öffnen' : ' mit Schloss schützen')} onClick=${() => lockPT(t)}><${Icon} n=${t.lock ? 'lock' : 'unlock'} size=${20} /></button><button type="button" class="chip" aria-label=${t.label + ' ändern'} onClick=${() => openTasks({ pt: t.id })}><${Icon} n="edit" size=${20} /></button><button type="button" class="chip" aria-label=${t.label + ' löschen'} onClick=${() => delPT(t)}><${Icon} n="bin" size=${20} /></button></div>` : null}`; })}
           ${[['tag', tagList], [mode, list]].map(([md, L]) => L.map((t, i) => { if (!vis(t) && !edit) return null; const d = !!(checks && checks[m.id + '-' + md + '-' + i]); const lk = md !== 'tag' && locked;
             return html`<div style="display:flex;gap:6px;align-items:center">
-              <button type="button" class=${'task' + (drag && drag.mid === m.id && drag.i === i && drag.md === md ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')}
+              <button type="button" class=${'task' + (drag && drag.kind === 'rt' && drag.mid === m.id && drag.i === i && drag.md === md ? ' lifted' : '')} aria-pressed=${d} aria-label=${t.label + (d ? ', erledigt' : ', offen')}
                 onPointerDown=${e => startPress(e, m.id, i, t, md)} onContextMenu=${e => e.preventDefault()} onClick=${e => { if (skipClick.current) return; onTap(m.id + md + i, e.currentTarget, el => toggle(m.id, i, md, el), () => lockTask(m.id, i, md)); }}
                 style=${(d ? 'background:' + mt(m.id) + ';border-color:' + mc(m.id) : '') + (lk && !edit ? ';opacity:' + (d ? '.85' : '.5') : '')}>
                 <span class="ic" style=${'background:' + (d ? 'var(--surface)' : mt(m.id))}><${Icon} n=${t.icon} size=${28} color=${mc(m.id)} /></span>
@@ -1770,7 +1775,7 @@ function Heute({ now }){
     </div>`}
     ${prof ? html`<${Profile} id=${prof} onClose=${() => setProf(null)} />` : null}
     ${addFor ? html`<${PersonTaskForm} mid=${addFor} mode0=${mode} r=${r} onClose=${() => setAddFor(null)} />` : null}
-    ${drag ? html`<div class="dragghost" style=${'left:' + drag.x + 'px;top:' + drag.y + 'px'} aria-hidden="true"><${Icon} n=${drag.t.icon} size=${24} color=${mc(drag.mid)} />${drag.t.label}${drag.over === 'trash' ? ' → löschen' : drag.over && drag.over !== drag.mid && byId[drag.over] ? ' → ' + byId[drag.over].name : ''}</div>
+    ${drag ? html`<div class="dragghost" style=${'left:' + drag.x + 'px;top:' + drag.y + 'px'} aria-hidden="true"><${Icon} n=${drag.t.icon || 'star'} size=${24} color=${drag.mid ? mc(drag.mid) : 'var(--star-line)'} />${drag.t.label}${drag.over === 'trash' ? ' → löschen' : drag.kind !== 'td' && drag.over && drag.over !== drag.mid && byId[drag.over] ? ' → ' + byId[drag.over].name : ''}</div>
       <div class=${'trashzone' + (drag.over === 'trash' ? ' over' : '')} data-trash="1" aria-hidden="true"><${Icon} n="bin" size=${34} /><span>${drag.over === 'trash' ? 'Loslassen zum Löschen' : 'Hierher ziehen zum Löschen'}</span></div>` : null}`;
 }
 function voiceToTask(v, mid, mode0){
@@ -3026,7 +3031,7 @@ const tpBox = document.createElement('div'); document.body.appendChild(tpBox); r
 const taskBox = document.createElement('div'); document.body.appendChild(taskBox); render(html`<${TaskHost} />`, taskBox);
 const pinBox = document.createElement('div'); document.body.appendChild(pinBox); render(html`<${PinHost} />`, pinBox);
 /* Automatisch aktualisieren: alle 10 Minuten nachsehen, ob eine neue Version online ist */
-const APP_VER = '49';
+const APP_VER = '50';
 function UpdateBar(){
   const [nv, setNv] = useState(null);
   useEffect(() => { const chk = async () => { try { const t = await fetch('index.html?u=' + Date.now(), { cache: 'no-store' }).then(r => r.text());
